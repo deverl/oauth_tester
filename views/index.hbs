@@ -1,0 +1,84 @@
+<header>
+    <div class="image-block">
+        <img src="/images/ts.svg" alt="logo" />
+    </div>
+    <div id="setup_button">
+        <img src="/images/settings.svg" alt="logo" />
+    </div>
+    <div class="title-block">
+        <h1>OAuth Management</h1>
+    </div>
+</header>
+
+<div>
+    <div class="button" id="login_to_tsheets" style="display:none;">
+        Login
+    </div>
+    <div class="button" id="request_token" style="display: none;">
+        Request Token
+    </div>
+    <div class="button" id="refresh_token_button" style="display: none;">
+        Refresh the token
+    </div>
+    <div class="button" id="delete_token_button" style="display: none;">
+        Delete token
+    </div>
+</div>
+
+<div>
+    <pre id="response_body"></pre>
+</div>
+
+<div id="form_container">
+    <form name="oauth_config_form" id="oauth_config_form">
+        <div class="inner-container">
+            <div class="dialog-title">Setup</div>
+            <table>
+                <tr>
+                    <td class="label-td">
+                        <label for="username_input">Username:</label>
+                    </td>
+                    <td>
+                        <input type="text" id="username_input" name="username_input" placeholder="username (url)" />
+                        <span>&nbsp;&nbsp;<i>(url)</i></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label-td">
+                        <label for="client_id_input">Client ID:</label>
+                    </td>
+                    <td>
+                        <input type="password" id="client_id_input" name="client_id_input" placeholder="client_id" />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label-td">
+                        <label for="client_secret_input">Client Secret:</label>
+                    </td>
+                    <td>
+                        <input type="password" id="client_secret_input" name="client_secret_input"
+                            placeholder="client_secret" />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label-td">
+                        <span for="api_server">API Server:</span>
+                    </td>
+                    <td>
+                        <input id="lntxweb1_radio" type="radio" name="api_server" value="lntxweb1" />
+                        <label for="lntxweb1_radio">lntxweb1</label>
+                        <input id="shazdev_radio" type="radio" name="api_server" value="shazdev" />
+                        <label for="shazdev_radio">shazdev</label>
+                    </td>
+                </tr>
+            </table>
+
+            <div class="button-row">
+                <!--
+                <button id="form_cancel_button">Cancel</button>
+                -->
+                <input type="submit" id="form_submit_button">OK</button>
+            </div>
+        </div>
+    </form>
+</div>

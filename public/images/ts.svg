@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with EazyDraw for Mac ( http://www.eazydraw.com/ ) -->
+
+<svg
+    version="1.1"
+    xmlns:dc="http://purl.org/dc/elements/1.1/"
+    xmlns:cc="http://creativecommons.org/ns#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:svg="http://www.w3.org/2000/svg"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    xmlns="http://www.w3.org/2000/svg"
+    width="310.939453125"
+    height="310.939453125"
+    viewBox="0, 0, 310.939453125, 310.939453125"
+    preserveAspectRatio="none"
+    id="svg2">
+   <defs
+       id="defs_0B31A0EE"/>
+   <metadata
+       id="metadata7">
+      <rdf:RDF>
+         <cc:Work
+             rdf:about="">
+            <dc:format>image/svg+xml</dc:format>
+            <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+            <dc:title></dc:title>
+         </cc:Work>
+      </rdf:RDF>
+   </metadata>
+   <g
+       id="layer_Paper"
+       style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-opacity:1;fill-rule:nonzero;stroke-linecap:square;stroke-linejoin:miter;stroke-width:1;stroke-miterlimit:10">
+      <circle
+          style="fill:#D42020;stroke:#D32020"
+          id="BB1A8C9F"
+          cx="155.469726562"
+          cy="155.469726562"
+          r="154.969726562"/>
+      <line
+          style="fill:#FFFFFF;stroke:#FFFFFF;stroke-linecap:round;stroke-width:50"
+          id="82DC26AF"
+          x1="75.7822265625"
+          y1="99.2138671875"
+          x2="241.465100348"
+          y2="99.0654296875"/>
+      <line
+          style="fill:#FFFFFF;stroke:#FFFFFF;stroke-linecap:round;stroke-width:50"
+          id="6B935AAF"
+          x1="156.815039063"
+          y1="100.645117188"
+          x2="155.580664063"
+          y2="246.858793115"/>
+   </g>
+</svg>

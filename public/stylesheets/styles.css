@@ -1,0 +1,215 @@
+div.button {
+    background-color: #0070d2;
+    color: white;
+    cursor: pointer;
+    display: inline-block;
+    border-radius: 4px;
+    padding: 6px 14px;
+    font-family: sans-serif;
+    font-size: 18px;
+    margin-left: 12px;
+}
+
+header {
+    padding-top: 20px;
+    padding-left: 10px;
+    margin-bottom: 30px;
+}
+
+header div.image-block {
+    display: inline-block;
+}
+
+header div.image-block img {
+    width: 80px;
+}
+
+header div.title-block {
+    display: inline-block;
+    vertical-align: top;
+    margin-left: 15px;
+}
+
+header div#setup_button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 30px;
+    height: 30px;
+}
+
+div.button:hover {
+    background-color: #005fb2;
+}
+
+pre#response_body {
+    margin-top: 20px;
+    margin-left: 10px;
+}
+
+.hidden {
+    display: none;
+}
+
+div.login_popup_outer_div {
+    position: fixed;
+    height: 600px;
+    width: 100%;
+    top: 150px;
+}
+
+div.login_popup_outer_div div.login_popup_inner_div {
+    width: 900px;
+    margin: 0 auto;
+}
+
+div.login_popup_outer_div div.login_popup_inner_div iframe {
+    width: 900px;
+    height: 600px;
+}
+
+div#form_container {
+    display: none;
+    position: fixed;
+    top: 150px;
+    left: 0;
+    right: 0;
+    z-index: 2;
+}
+
+div.inner-container {
+    width: 420px;
+    margin-left: auto;
+    margin-right: auto;
+    background-color: white;
+    opacity: 1;
+    padding: 20px;
+    border: 2px solid gray;
+    border-radius: 14px;
+    font-size: 17px;
+    font-family: sans-serif;
+}
+
+div.inner-container tr > td {
+    padding-bottom: 10px;
+}
+
+div.inner-container tr > td:first-of-type {
+    text-align: right;
+}
+
+div.inner-container input[type='text'],
+div.inner-container input[type='password'] {
+    font-size: 14px;
+}
+
+div.inner-container input[name='client_id_input'],
+div.inner-container input[name='client_secret_input'] {
+    width: 290px;
+}
+
+div.inner-container div.dialog-title {
+    text-align: left;
+    font-size: 30px;
+    color: #333;
+    font-weight: bold;
+    line-height: 1.5;
+    margin-bottom: 25px;
+}
+
+div.inner-container input[type='radio'] {
+    margin-left: 10px;
+}
+
+div.button-row {
+    margin-top: 16px;
+    text-align: right;
+}
+
+div.button-row button {
+    padding: 6px 16px 6px 16px;
+    margin-right: 10px;
+    font-size: 14px;
+    border-radius: 4px;
+}
+
+div.button-row button:last-of-type {
+    margin-right: 0px;
+    background-color: #0c70cf;
+    color: white;
+}
+
+div#overlay_background {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: gray;
+    opacity: 0.9;
+    z-index: 1;
+}
+
+div#overlay {
+    display: none;
+    background-color: #999999;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 4;
+}
+
+div#busy_overlay {
+    display: none;
+    position: absolute;
+    z-index: 320;
+    left: calc(50vw - 58px);
+    top: calc(20vh - 10px);
+}
+
+/* This loader CSS was reused from https://projects.lukehaas.me/css-loaders/ */
+.loader,
+.loader:after {
+    border-radius: 50%;
+    width: 10em;
+    height: 10em;
+}
+.loader {
+    margin: 60px auto;
+    font-size: 10px;
+    position: relative;
+    text-indent: -9999em;
+    border-top: 1.1em solid rgba(255, 255, 255, 0.2);
+    border-right: 1.1em solid rgba(255, 255, 255, 0.2);
+    border-bottom: 1.1em solid rgba(255, 255, 255, 0.2);
+    border-left: 1.1em solid #ffffff;
+    -webkit-transform: translateZ(0);
+    -ms-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-animation: load8 1.1s infinite linear;
+    animation: load8 1.1s infinite linear;
+}
+@-webkit-keyframes load8 {
+    0% {
+        -webkit-transform: rotate(0deg);
+        transform: rotate(0deg);
+    }
+    100% {
+        -webkit-transform: rotate(360deg);
+        transform: rotate(360deg);
+    }
+}
+@keyframes load8 {
+    0% {
+        -webkit-transform: rotate(0deg);
+        transform: rotate(0deg);
+    }
+    100% {
+        -webkit-transform: rotate(360deg);
+        transform: rotate(360deg);
+    }
+}
