@@ -251,7 +251,7 @@ function handle_request_token(evt) {
     hide_action_buttons();
     show_busy();
 
-    const url = `${api_base_url}/doExchangeCodeForToken`;
+    const url = `${api_base_url}/v1/exchange_code_for_token`;
 
     let opts = {
         method: 'POST',
@@ -262,21 +262,25 @@ function handle_request_token(evt) {
             username: config.username,
             code: code
         },
-        dataType: 'json',
-        success: (data, textStatus, jqXHR) => {
-            console.log('INFO => doExchangeCodeForToken success');
+        dataType: 'json'
+    };
+
+    $.ajax(url, opts)
+        .then((data, textStatus, jqXHR) => {
+            debugger;
+            hide_busy();
+            console.log('INFO => exchange_code_for_token success');
             if ('token' in data) {
                 set_response_area(data);
                 ui.refresh_token_button.show();
                 ui.delete_token_button.show();
             }
-        },
-        error: (jqXHR, textStatus, errorThrown) => {
+        })
+        .fail((jqXHR, textStatus, errorThrown) => {
+            debugger;
+            hide_busy();
             set_response_area(errorThrown);
-        }
-    };
-
-    $.ajax(url, opts);
+        });
 }
 
 function handle_form_cancel(evt) {

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../server/db');
+const ts = require('../server/ts');
 
 router.post('/get_startup_data', (req, res, next) => {
     let code, token_string, username, o;
@@ -92,13 +93,20 @@ router.post('/exchange_code_for_token', (req, res, next) => {
         const username = body.username;
         const code = body.code;
 
-        o = { status: 'ok' };
+        ts.get_token(tsheets_api_server, client_id, client_secret, username, code)
+            .then(token_data => {
+                o = { status: 'ok', token: token_data };
+                res.send(o);
+            })
+            .catch(err => {
+                res.status(400);
+                o = { status: 'fail', message: 'API failure' };
+            });
     } else {
         res.status(400);
         o = { status: 'fail', message: 'Invalid request' };
+        res.send(o);
     }
-
-    res.send(o);
 });
 
 module.exports = router;
