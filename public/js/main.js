@@ -164,9 +164,9 @@ function handle_refresh_button(evt) {
     hide_action_buttons();
     show_busy();
 
-    const url = `${api_base_url}/doRefreshToken`;
+    const url = `${api_base_url}/v1/refresh_token`;
 
-    let opts = {
+    const opts = {
         method: 'POST',
         data: {
             api_server: config.api_server,
@@ -174,30 +174,32 @@ function handle_refresh_button(evt) {
             client_secret: config.client_secret,
             username: config.username
         },
-        dataType: 'json',
-        success: (data, textStatus, jqXHR) => {
-            console.log('INFO => doRefreshToken success');
-            if ('response' in data) {
-                let s;
+        dataType: 'json'
+    };
 
-                if (typeof data.response === 'string') {
-                    let o = JSON.parse(data.response);
+    $.ajax(url, opts)
+        .then((data, textStatus, jqXHR) => {
+            hide_busy();
+            console.log('INFO => refresh_token success');
+            if (data.token) {
+                let s = '';
+
+                if (typeof data.token === 'string') {
+                    let o = JSON.parse(data.token);
                     s = JSON.stringify(o, null, 4);
                 } else {
-                    s = JSON.stringify(data.response, null, 4);
+                    s = JSON.stringify(data.token, null, 4);
                 }
 
                 set_response_area(s);
                 ui.refresh_token_button.show();
                 ui.delete_token_button.show();
             }
-        },
-        error: (jqXHR, textStatus, errorThrown) => {
-            console.log('ERROR => doRefreshToken failed');
-        }
-    };
-
-    $.ajax(url, opts);
+        })
+        .fail((jqXHR, textStatus, errorThrown) => {
+            hide_busy();
+            console.log('ERROR => refresh_token failed');
+        });
 }
 
 function handle_delete_token(evt) {
@@ -269,7 +271,6 @@ function handle_request_token(evt) {
 
     $.ajax(url, opts)
         .then((data, textStatus, jqXHR) => {
-            debugger;
             hide_busy();
             console.log('INFO => exchange_code_for_token success');
             if ('token' in data) {
@@ -350,15 +351,18 @@ function do_startup_actions() {
 
     const url = `${api_base_url}/v1/get_startup_data`;
 
-    let opts = {
+    const opts = {
         method: 'POST',
         data: {
             client_id: config.client_id,
             client_secret: config.client_secret,
             username: config.username
         },
-        dataType: 'json',
-        success: (data, textStatus, jqXHR) => {
+        dataType: 'json'
+    };
+
+    $.ajax(url, opts)
+        .then((data, textStatus, jqXHR) => {
             console.log('INFO => get_startup_data success');
             if ('public_ip' in data) {
                 public_ip = data.public_ip;
@@ -374,11 +378,8 @@ function do_startup_actions() {
                 set_response_area(data.message);
                 hide_action_buttons();
             }
-        },
-        error: (jqXHR, textStatus, errorThrown) => {
+        })
+        .fail((jqXHR, textStatus, errorThrown) => {
             console.log('ERROR => get_startup_data failed');
-        }
-    };
-
-    $.ajax(url, opts);
+        });
 }

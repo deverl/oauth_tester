@@ -104,4 +104,31 @@ router.post('/exchange_code_for_token', (req, res, next) => {
     }
 });
 
+router.post('/refresh_token', (req, res, next) => {
+    let o,
+        body = req.body;
+
+    if (body.api_server && body.username && body.client_id && body.client_secret) {
+        const tsheets_api_server = body.api_server;
+        const client_id = body.client_id;
+        const client_secret = body.client_secret;
+        const username = body.username;
+        const code = body.code;
+
+        ts.refresh_token(tsheets_api_server, client_id, client_secret, username)
+            .then(token => {
+                o = { status: 'ok', token: token };
+                res.send(o);
+            })
+            .catch(err => {
+                res.status(400);
+                o = { status: 'fail', message: 'API failure' };
+            });
+    } else {
+        res.status(400);
+        o = { status: 'fail', message: 'Invalid request' };
+        res.send(o);
+    }
+});
+
 module.exports = router;
