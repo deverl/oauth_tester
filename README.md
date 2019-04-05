@@ -27,7 +27,13 @@ This is a simple node app that provides a means of testing the TSheets OAuth flo
 
 ### Configure
 
-The first time you open the app, you will be presented with a screen asking you for your username, and server (lntxweb1 or shazdev) and your client\_id and client\_secret (from your API app in TSheets). Enter all of these values and press the **OK** button to continue.
+The first time you open the app, you will be presented with a screen asking you for your username, and server (lntxweb1 or shazdev) and your client\_id and client\_secret (from your API app in TSheets).
+
+The dialog will look something like this:
+
+<img src="http://ds6.us/setup_dialog.png" width="400">
+
+Enter all of these values and press the **OK** button to continue.
 
 ### Login
 
