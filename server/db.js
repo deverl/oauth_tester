@@ -63,13 +63,25 @@ function store_token(username, token) {
 
     token = JSON.stringify(token, null, 4);
 
-    write_file(path);
+    write_file(path, token);
 }
 
 function read_token(username) {
+    let token = null;
+
     const path = `${global.appRoot}/db/${username}.token`;
 
-    return read_file(path);
+    const s = read_file(path);
+
+    if (s) {
+        try {
+            token = JSON.parse(s);
+        } catch (e) {
+            console.log(`ERROR => Couldn't parse string '${s}'!`);
+        }
+    }
+
+    return token;
 }
 
 function delete_token(username) {

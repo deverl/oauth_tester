@@ -207,15 +207,19 @@ function handle_delete_token(evt) {
 
     const url = `${api_base_url}/v1/delete_token`;
 
-    let opts = {
+    const opts = {
         method: 'POST',
         data: {
             client_id: config.client_id,
             client_secret: config.client_secret,
             username: config.username
         },
-        dataType: 'json',
-        success: (data, textStatus, jqXHR) => {
+        dataType: 'json'
+    };
+
+    $.ajax(url, opts)
+        .then((data, textStatus, jqXHR) => {
+            hide_busy();
             if ('status' in data) {
                 if (data.status == 'ok') {
                     if ('message' in data) {
@@ -233,13 +237,11 @@ function handle_delete_token(evt) {
             } else {
                 set_response_area('ERROR: No status in response!');
             }
-        },
-        error: (jqXHR, textStatus, errorThrown) => {
+        })
+        .fail((jqXHR, textStatus, errorThrown) => {
+            hide_busy();
             console.log('ERROR => delete_token failed');
-        }
-    };
-
-    $.ajax(url, opts);
+        });
 }
 
 function handle_request_token(evt) {

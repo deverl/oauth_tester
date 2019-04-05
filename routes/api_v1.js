@@ -4,28 +4,23 @@ const db = require('../server/db');
 const ts = require('../server/ts');
 
 router.post('/get_startup_data', (req, res, next) => {
-    let code, token_string, username, o;
+    let code, token, token_string, username, o;
 
     if (req.body.username) {
         username = req.body.username;
 
         code = db.read_code(username);
 
-        token_string = db.read_token(username);
+        token = db.read_token(username);
 
         if (code) {
             o = { code: code };
-        } else if (token_string) {
+        } else if (token) {
             let timestamp = new Date().getTime();
-            try {
-                let token = JSON.parse(token_string);
-                if (token.expire_time_ms && token.expire_time_ms > timestamp) {
-                    o = { token: token };
-                } else {
-                    o = { message: 'Token is invalid (expired)' };
-                }
-            } catch (e) {
-                o = { message: 'No token in storage' };
+            if (token.expire_time_ms && token.expire_time_ms > timestamp) {
+                o = { token: token };
+            } else {
+                o = { message: 'Token is invalid (expired)' };
             }
         } else {
             o = { message: 'No token in storage' };
@@ -46,7 +41,7 @@ router.post('/delete_token', (req, res, next) => {
         username = req.body.username;
         try {
             db.delete_token(username);
-            o = { status: 'ok' };
+            o = { status: 'ok', message: 'No token in storage' };
         } catch (e) {
             o = { status: 'fail' };
         }
@@ -94,8 +89,8 @@ router.post('/exchange_code_for_token', (req, res, next) => {
         const code = body.code;
 
         ts.get_token(tsheets_api_server, client_id, client_secret, username, code)
-            .then(token_data => {
-                o = { status: 'ok', token: token_data };
+            .then(token => {
+                o = { status: 'ok', token: token };
                 res.send(o);
             })
             .catch(err => {

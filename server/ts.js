@@ -71,11 +71,9 @@ function get_token(api_server, client_id, client_secret, username, code) {
                     console.error(`ERROR: (get_token): token.error = ${token.error}`);
                     reject(token.error);
                 } else {
-                    let token_data = make_token_data(token);
-                    let path = `data/${username}/token.json`;
-                    // const s = JSON.stringify(token_data, null, 4);
-                    db.store_token(username, token_data);
-                    resolve(token_data);
+                    db.store_token(username, token);
+                    token = db.read_token(username);
+                    resolve(token);
                 }
             }
         });
