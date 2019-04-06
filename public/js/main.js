@@ -438,6 +438,12 @@ function handle_setup(evt) {
  * Displays the setup dialog.
  */
 function show_setup_dialog() {
+    ui.form.username.val(config.username);
+    ui.form.client_id.val(config.client_id);
+    ui.form.client_secret.val(config.client_secret);
+
+    $(`input[value=${config.api_server}]`).prop('checked', true);
+
     ui.overlay.show();
     ui.dialog.show();
 }
