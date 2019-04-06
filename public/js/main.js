@@ -48,9 +48,6 @@ $(document).ready(() => {
     ui.request_token_button.click(handle_request_token);
     ui.delete_token_button.click(handle_delete_token);
 
-    // ui.form.cancel.click(handle_form_cancel);
-    // ui.form.submit.click(handle_form_submit);
-
     $('form#oauth_config_form').on('submit', evt => {
         evt.stopPropagation();
         evt.preventDefault();
@@ -69,16 +66,26 @@ $(document).ready(() => {
     }
 });
 
+/**
+ * Puts up the overlay and the busy spinner.
+ */
 function show_busy() {
     ui.overlay.show();
     ui.busy_overlay.show();
 }
 
+/**
+ * Removes the overlay and the busy spinner.
+ */
 function hide_busy() {
     ui.overlay.hide();
     ui.busy_overlay.hide();
 }
 
+/**
+ * Hides the action buttons, and conditionally hides the login button.
+ * @param {boolean} hide_all if true, hides all of the action buttons, including the login buttons.
+ */
 function hide_action_buttons(hide_all = false) {
     if (hide_all) {
         ui.login_button.hide();
@@ -88,6 +95,10 @@ function hide_action_buttons(hide_all = false) {
     ui.delete_token_button.hide();
 }
 
+/**
+ * Puts a string in the response area.
+ * @param {string|object} s -- the string, or object, to display
+ */
 function set_response_area(s) {
     if (typeof s === 'object') {
         s = JSON.stringify(s, null, 4);
@@ -95,10 +106,18 @@ function set_response_area(s) {
     ui.response_area.text(s);
 }
 
+/**
+ * Sets the response area to an empty string, effectively clearing it.
+ */
 function clear_response_area() {
     set_response_area('');
 }
 
+/**
+ * Utility function to create the API url to be used with TSheets for
+ * the current username and server name.
+ * @returns {string} The base API URL to use with TSheets.
+ */
 function get_base_api_url() {
     let server_type;
 
@@ -115,13 +134,17 @@ function get_base_api_url() {
     return url;
 }
 
+/**
+ * Handler for the login button.
+ * @param {Event} evt
+ */
 function handle_login_button(evt) {
     console.log('INFO => in handle_login_button');
     hide_action_buttons();
     clear_response_area();
     show_busy();
 
-    const state = util.get_state();
+    const state = util.create_state();
 
     const url = `${api_base_url}/v1/save_state_data`;
 
@@ -202,6 +225,10 @@ function handle_refresh_button(evt) {
         });
 }
 
+/**
+ * Handler for the delete-token button.
+ * @param {Event} evt
+ */
 function handle_delete_token(evt) {
     hide_action_buttons();
     set_response_area('');
@@ -246,6 +273,10 @@ function handle_delete_token(evt) {
         });
 }
 
+/**
+ * Handler for the request-token button.
+ * @param {Event} evt
+ */
 function handle_request_token(evt) {
     console.log('INFO => in handle_request_token');
 
@@ -286,11 +317,10 @@ function handle_request_token(evt) {
         });
 }
 
-function handle_form_cancel(evt) {
-    ui.dialog.hide();
-    ui.overlay.hide();
-}
-
+/**
+ * Verifies that the required fields are present, and if so saves them as the current config.
+ * @param {Event} evt
+ */
 function handle_form_submit(evt) {
     config.username = ui.form.username.val();
     config.client_id = ui.form.client_id.val();
@@ -310,7 +340,9 @@ function handle_form_submit(evt) {
     }
 }
 
-// Reads configuration data from cookies into the global config object, and sets the values into the form.
+/**
+ * Reads configuration data from cookies into the global config object, and sets the values into the form.
+ */
 function load_config() {
     config.username = localStorage.getItem(username_cookie_name);
     config.client_id = localStorage.getItem(client_id_cookie_name);
@@ -329,6 +361,10 @@ function load_config() {
     $(`input[value=${config.api_server}]`).prop('checked', true);
 }
 
+/**
+ * Saves the config in local storage.
+ * @param {Object} config
+ */
 function save_config(config) {
     localStorage.setItem(username_cookie_name, config.username);
     localStorage.setItem(client_id_cookie_name, config.client_id);
@@ -336,15 +372,25 @@ function save_config(config) {
     localStorage.setItem(api_server_cookie_name, config.api_server);
 }
 
+/**
+ * Event handler for the setup button. Displays the setup dialog.
+ * @param {Event} evt
+ */
 function handle_setup(evt) {
     show_setup_dialog();
 }
 
+/**
+ * Displays the setup dialog.
+ */
 function show_setup_dialog() {
     ui.overlay.show();
     ui.dialog.show();
 }
 
+/**
+ * Fetches startup data from the server and configure the app.
+ */
 function do_startup_actions() {
     console.log('INFO => in handle_refresh_button');
     clear_response_area();

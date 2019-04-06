@@ -1,5 +1,10 @@
 const fs = require('fs');
 
+/**
+ * Utility function that reads the contents of a file and returns it as a utf-8 string.
+ * @param {string} path
+ * @returns {string} the contents of the file.
+ */
 const read_file = path => {
     let data = null;
     if (fs.existsSync(path)) {
@@ -13,15 +18,30 @@ const read_file = path => {
     return data;
 };
 
+/**
+ * Utility function to write a string or object to a file.
+ * @param {string} path
+ * @param {string|object} data
+ */
 const write_file = (path, data) => {
     fs.writeFileSync(path, data, { encoding: 'utf8', flag: 'w' });
 };
 
+/**
+ * Saves the code for the specified user.
+ * @param {string} username
+ * @param {string} code
+ */
 function store_code(username, code) {
     const path = `${global.appRoot}/db/${username}.code`;
     write_file(path, code);
 }
 
+/**
+ * Retrieves the code that was last stored for the given username, then deletes the code.
+ * @param {string} username
+ * @returns {string} the code that was previously stored for the given user
+ */
 function read_code(username) {
     const path = `${global.appRoot}/db/${username}.code`;
 
@@ -34,6 +54,10 @@ function read_code(username) {
     return data;
 }
 
+/**
+ * Utility function to delete the code file associated with the given username.
+ * @param {string} username
+ */
 function delete_code(username) {
     let result = false;
     const path = `${global.appRoot}/db/${username}.code`;
@@ -45,6 +69,12 @@ function delete_code(username) {
     return true;
 }
 
+/**
+ * Stores a token for the given username. Ensures that the token is part of a container
+ * object that includes meta data about the expiration date/time of the token.
+ * @param {string} username
+ * @param {string} token
+ */
 function store_token(username, token) {
     const path = `${global.appRoot}/db/${username}.token`;
 
@@ -66,6 +96,11 @@ function store_token(username, token) {
     write_file(path, token);
 }
 
+/**
+ * Retrieves the token (with associated meta data) for the given username
+ * @param {string} username
+ * @returns {object} token, including meta data
+ */
 function read_token(username) {
     let token = null;
 
@@ -84,6 +119,11 @@ function read_token(username) {
     return token;
 }
 
+/**
+ * Deletes a token (and meta data) for the given username.
+ * @param {string} username
+ * @returns {boolean} true if the token was found and deleted, false otherwise.
+ */
 function delete_token(username) {
     let result = false;
     const path = `${global.appRoot}/db/${username}.token`;
@@ -95,11 +135,23 @@ function delete_token(username) {
     return result;
 }
 
+/**
+ * Saves the state value associated iwth the given username.
+ * Later, when TSheets redirects to our redirect_uri, we will use the
+ * state value that they return to use to lookup the user.
+ * @param {string} username
+ * @param {string} state
+ */
 function save_state(username, state) {
     const path = `${global.appRoot}/db/${state}.state`;
     write_file(path, username);
 }
 
+/**
+ * Looks up the username associated with the specified state value, then deletes the state file.
+ * @param {string} state
+ * @returns {string|null} username associated with the given state value, or null if not found.
+ */
 function get_username_from_state(state) {
     const path = `${global.appRoot}/db/${state}.state`;
     let username = read_file(path);
@@ -110,6 +162,10 @@ function get_username_from_state(state) {
     return username;
 }
 
+/**
+ * Utility function to fetch a list of all of the state files in our storage.
+ * @returns {Array} The names of all of the state files in storage.
+ */
 const get_state_files = () => {
     let state_files = [],
         files;
@@ -121,6 +177,10 @@ const get_state_files = () => {
     return state_files;
 };
 
+/**
+ * Deletes all of the state files from storage. This is just a maintenance
+ * function to ensure we don't end up with a bunch of orphaned state files.
+ */
 function delete_all_state() {
     let state_files = get_state_files();
     state_files.map(f => {

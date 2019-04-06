@@ -1,26 +1,13 @@
 const request = require('request');
 const db = require('./db');
 
-function make_token_data(token) {
-    if (typeof token === 'string') {
-        token = JSON.parse(token);
-    }
-
-    let token_data = {
-        token: token
-    };
-
-    let t = new Date();
-    let ms = t.getTime();
-    let expire_time_ms = ms + token.expires_in * 1000;
-    token_data.expire_time_ms = expire_time_ms;
-    let t2 = new Date(expire_time_ms);
-
-    token_data.expiration = t2.toString();
-
-    return token_data;
-}
-
+/**
+ * Utility function to create the API url to be used with TSheets for
+ * the given username and server name.
+ * @param {string} api_server
+ * @param {string} username
+ * @returns {string} The base API URL to use with TSheets.
+ */
 function get_api_server_base_url(api_server, username) {
     let server_ext = '';
     if (api_server === 'lntxweb1') {
@@ -32,6 +19,15 @@ function get_api_server_base_url(api_server, username) {
     return url;
 }
 
+/**
+ * Handles the details of exchanging a code for a token. If a token is obtained, it is stored in the database.
+ * @param {string} api_server
+ * @param {string} client_id
+ * @param {string} client_secret
+ * @param {string} username
+ * @param {string} code
+ * @returns {Promise} Resolved with the token, or rejected with an error message.
+ */
 function get_token(api_server, client_id, client_secret, username, code) {
     console.log(`DEBUG => (get_token): api_server = ${api_server}`);
     console.log(`DEBUG => (get_token): client_id = ${client_id}`);
@@ -83,11 +79,13 @@ function get_token(api_server, client_id, client_secret, username, code) {
 }
 
 /**
- * Handles the details of refreshing a TSheets OAuth token
+ * Handles the details of refreshing a TSheets OAuth token.
+ * If a new token is obtained, it is stored in the database.
  * @param {string} api_server -- shazdev or lntxweb1
  * @param {string} client_id
  * @param {string} client_secret
  * @param {string} username
+ * @returns {Promise} Resolved with the new token, or rejected with an error message.
  */
 function refresh_token(api_server, client_id, client_secret, username) {
     let p = new Promise((resolve, reject) => {

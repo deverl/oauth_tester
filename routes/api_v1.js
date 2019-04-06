@@ -3,6 +3,9 @@ const router = express.Router();
 const db = require('../server/db');
 const ts = require('../server/ts');
 
+/**
+ * Handler for the get_startup_data end point.
+ */
 router.post('/get_startup_data', (req, res, next) => {
     let code, token, token_string, username, o;
 
@@ -33,6 +36,9 @@ router.post('/get_startup_data', (req, res, next) => {
     res.send(o);
 });
 
+/**
+ * Handler for the delete_token end point.
+ */
 router.post('/delete_token', (req, res, next) => {
     let username,
         o = { status: 'fail' };
@@ -53,6 +59,9 @@ router.post('/delete_token', (req, res, next) => {
     res.send(o);
 });
 
+/**
+ * Handler for the save_state_data end point.
+ */
 router.post('/save_state_data', (req, res, next) => {
     let o,
         body = req.body;
@@ -68,6 +77,9 @@ router.post('/save_state_data', (req, res, next) => {
     res.send(o);
 });
 
+/**
+ * Handler for the oauth_handler end point.
+ */
 router.get('/oauth_handler', (req, res, next) => {
     if (req.query.code && req.query.state) {
         let username = db.get_username_from_state(req.query.state);
@@ -81,6 +93,9 @@ router.get('/oauth_handler', (req, res, next) => {
     res.redirect('/');
 });
 
+/**
+ * Handler for the exchange_code_for_token end point.
+ */
 router.post('/exchange_code_for_token', (req, res, next) => {
     let o,
         body = req.body;
@@ -108,6 +123,9 @@ router.post('/exchange_code_for_token', (req, res, next) => {
     }
 });
 
+/**
+ * Handler for the refresh_token end point.
+ */
 router.post('/refresh_token', (req, res, next) => {
     let o,
         body = req.body;
