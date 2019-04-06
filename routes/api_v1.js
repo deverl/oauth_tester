@@ -71,7 +71,11 @@ router.post('/save_state_data', (req, res, next) => {
 router.get('/oauth_handler', (req, res, next) => {
     if (req.query.code && req.query.state) {
         let username = db.get_username_from_state(req.query.state);
-        db.store_code(username, req.query.code);
+        if (username) {
+            db.store_code(username, req.query.code);
+        } else {
+            console.log(`ERROR => (oauth_handler) no username retrieved for code. query = ${req.query}`);
+        }
     }
 
     res.redirect('/');
