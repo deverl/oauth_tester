@@ -144,8 +144,6 @@ function handle_login_button(evt) {
     const opts = {
         method: 'POST',
         data: {
-            client_id: config.client_id,
-            client_secret: config.client_secret,
             username: config.username,
             state: state
         },
@@ -184,9 +182,6 @@ function handle_refresh_button(evt) {
     const opts = {
         method: 'POST',
         data: {
-            api_server: config.api_server,
-            client_id: config.client_id,
-            client_secret: config.client_secret,
             username: config.username
         },
         dataType: 'json'
@@ -231,8 +226,6 @@ function handle_delete_token(evt) {
     const opts = {
         method: 'POST',
         data: {
-            client_id: config.client_id,
-            client_secret: config.client_secret,
             username: config.username
         },
         dataType: 'json'
@@ -283,9 +276,6 @@ function handle_request_token(evt) {
     let opts = {
         method: 'POST',
         data: {
-            api_server: config.api_server,
-            client_id: config.client_id,
-            client_secret: config.client_secret,
             username: config.username,
             code: code
         },

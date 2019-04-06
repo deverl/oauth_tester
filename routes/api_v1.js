@@ -13,9 +13,7 @@ router.post('/get_startup_data', (req, res, next) => {
         username = req.body.username;
 
         code = db.read_code(username);
-
         token = db.read_token(username);
-
         config = db.read_config(username);
 
         if (code) {
@@ -114,7 +112,7 @@ router.post('/save_state_data', (req, res, next) => {
     let o,
         body = req.body;
 
-    if (body.username && body.client_id && body.client_secret && body.state) {
+    if (body.username && body.state) {
         db.save_state(body.username, body.state);
         o = { status: 'ok' };
     } else {
@@ -148,14 +146,11 @@ router.post('/exchange_code_for_token', (req, res, next) => {
     let o,
         body = req.body;
 
-    if (body.api_server && body.username && body.client_id && body.client_secret && body.code) {
-        const tsheets_api_server = body.api_server;
-        const client_id = body.client_id;
-        const client_secret = body.client_secret;
+    if (body.username && body.code) {
         const username = body.username;
         const code = body.code;
 
-        ts.get_token(tsheets_api_server, client_id, client_secret, username, code)
+        ts.get_token(username, code)
             .then(token => {
                 o = { status: 'ok', token: token };
                 res.send(o);
@@ -178,14 +173,10 @@ router.post('/refresh_token', (req, res, next) => {
     let o,
         body = req.body;
 
-    if (body.api_server && body.username && body.client_id && body.client_secret) {
-        const tsheets_api_server = body.api_server;
-        const client_id = body.client_id;
-        const client_secret = body.client_secret;
+    if (body.username) {
         const username = body.username;
-        const code = body.code;
 
-        ts.refresh_token(tsheets_api_server, client_id, client_secret, username)
+        ts.refresh_token(username)
             .then(token => {
                 o = { status: 'ok', token: token };
                 res.send(o);

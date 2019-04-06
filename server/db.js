@@ -198,7 +198,7 @@ function save_config(username, client_id, client_secret, api_server) {
             client_secret: client_secret,
             api_server: api_server
         };
-        const data = JSON.stringify(config);
+        const data = JSON.stringify(config, null, 4);
         write_file(path, data);
     } else {
         console.log('ERROR => (save_config) Invalid request, missing or empty parameters');
