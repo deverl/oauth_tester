@@ -453,10 +453,8 @@ function show_setup_dialog() {
  */
 function configure_app() {
     clear_response_area();
-    show_busy();
     get_startup_data()
         .then(data => {
-            hide_busy();
             if ('config' in data) {
                 config = data.config;
             }
@@ -479,9 +477,7 @@ function configure_app() {
                 hide_action_buttons();
             }
         })
-        .catch(error => {
-            hide_busy();
-        });
+        .catch(error => {});
 }
 
 /**
