@@ -189,6 +189,39 @@ function delete_all_state() {
     });
 }
 
+function save_config(username, client_id, client_secret, api_server) {
+    if (username && client_id && client_secret && api_server) {
+        const path = `${global.appRoot}/db/${username}.config`;
+        const config = {
+            username: username,
+            client_id: client_id,
+            client_secret: client_secret,
+            api_server: api_server
+        };
+        const data = JSON.stringify(config);
+        write_file(path, data);
+    } else {
+        console.log('ERROR => (save_config) Invalid request, missing or empty parameters');
+    }
+}
+
+function read_config(username) {
+    let config = null;
+    if (username) {
+        const path = `${global.appRoot}/db/${username}.config`;
+        const config_string = read_file(path);
+        try {
+            config = JSON.parse(config_string);
+        } catch (e) {
+            console.log('ERROR => (read_config) Failed to read file!', e);
+        }
+    } else {
+        console.log('ERROR => (read_config) Invalid request, missing or empty parameters');
+    }
+
+    return config;
+}
+
 module.exports.store_code = store_code;
 module.exports.read_code = read_code;
 module.exports.delete_code = delete_code;
@@ -200,3 +233,6 @@ module.exports.delete_token = delete_token;
 module.exports.save_state = save_state;
 module.exports.get_username_from_state = get_username_from_state;
 module.exports.delete_all_state = delete_all_state;
+
+module.exports.save_config = save_config;
+module.exports.read_config = read_config;

@@ -56,14 +56,7 @@ $(document).ready(() => {
 
     ui.setup_button.click(handle_setup);
 
-    load_config();
-
-    if (config.username && config.client_id && config.client_secret) {
-        ui.login_button.show();
-        do_startup_actions();
-    } else {
-        show_setup_dialog();
-    }
+    configure_app();
 });
 
 /**
@@ -176,7 +169,6 @@ function handle_login_button(evt) {
             }
         })
         .fail((jqXHR, textStatus, errorThrown) => {
-            debugger;
             set_response_area("Couldn't save state!");
         });
 }
@@ -311,7 +303,6 @@ function handle_request_token(evt) {
             }
         })
         .fail((jqXHR, textStatus, errorThrown) => {
-            debugger;
             hide_busy();
             set_response_area(errorThrown);
         });
@@ -334,7 +325,7 @@ function handle_form_submit(evt) {
         save_config(config);
 
         ui.login_button.show();
-        do_startup_actions();
+        get_startup_data();
     } else {
         alert('All fields are required!');
     }
@@ -342,34 +333,107 @@ function handle_form_submit(evt) {
 
 /**
  * Reads configuration data from cookies into the global config object, and sets the values into the form.
+ * @returns {Promise} resolved on success, or rejected with an error string.
  */
 function load_config() {
-    config.username = localStorage.getItem(username_cookie_name);
-    config.client_id = localStorage.getItem(client_id_cookie_name);
-    config.client_secret = localStorage.getItem(client_secret_cookie_name);
-    config.api_server = localStorage.getItem(api_server_cookie_name);
+    let p = new Promise((resolve, reject) => {
+        const username = localStorage.getItem(username_cookie_name);
 
-    if (!config.api_server) {
-        // Set a default.
-        config.api_server = 'lntxweb1';
-    }
+        read_config(username)
+            .then(cfg => {
+                config = cfg;
+                ui.form.username.val(config.username);
+                ui.form.client_id.val(config.client_id);
+                ui.form.client_secret.val(config.client_secret);
 
-    ui.form.username.val(config.username);
-    ui.form.client_id.val(config.client_id);
-    ui.form.client_secret.val(config.client_secret);
+                $(`input[value=${config.api_server}]`).prop('checked', true);
+                resolve();
+            })
+            .catch(error => {
+                reject(error);
+            });
+    });
 
-    $(`input[value=${config.api_server}]`).prop('checked', true);
+    return p;
 }
 
 /**
- * Saves the config in local storage.
+ * Saves the config on the server.
  * @param {Object} config
  */
 function save_config(config) {
     localStorage.setItem(username_cookie_name, config.username);
-    localStorage.setItem(client_id_cookie_name, config.client_id);
-    localStorage.setItem(client_secret_cookie_name, config.client_secret);
-    localStorage.setItem(api_server_cookie_name, config.api_server);
+
+    const url = `${api_base_url}/v1/save_config`;
+
+    const opts = {
+        method: 'POST',
+        data: {
+            username: config.username,
+            client_id: config.client_id,
+            client_secret: config.client_secret,
+            api_server: config.api_server
+        },
+        dataType: 'json'
+    };
+
+    $.ajax(url, opts)
+        .then((data, textStatus, jqXHR) => {
+            console.log('INFO => save_config success');
+            if (data.status) {
+                if (data.status === 'ok') {
+                    console.log('Successfully saved the config on the server.');
+                } else {
+                    alert('Failed to save the config');
+                }
+            } else {
+                alert('Invalid response from the server');
+            }
+        })
+        .fail((jqXHR, textStatus, errorThrown) => {
+            console.log('ERROR => save_config failed');
+            alert('Failed to save the config');
+        });
+}
+
+/**
+ * Fetches the config from the server.
+ * @param {Object} config
+ * @returns {Promise} resolves with the config object if successful, otherwise rejects with an error message.
+ */
+function read_config(username) {
+    let p = new Promise((resolve, reject) => {
+        const url = `${api_base_url}/v1/read_config`;
+
+        const opts = {
+            method: 'POST',
+            data: {
+                username: username
+            },
+            dataType: 'json'
+        };
+
+        $.ajax(url, opts)
+            .then((data, textStatus, jqXHR) => {
+                console.log('INFO => (read_config) success');
+                if (data.status) {
+                    if (data.status === 'ok' && data.config) {
+                        console.log('Successfully read the config from the server.');
+                        resolve(data.config);
+                    } else {
+                        reject('Failed to read the config');
+                    }
+                } else {
+                    reject('Invalid response from the server');
+                }
+            })
+            .fail((jqXHR, textStatus, errorThrown) => {
+                console.log('ERROR => (read_config) failed');
+                reject('Failed to read the config from the server');
+            });
+    });
+
+    return p;
 }
 
 /**
@@ -389,30 +453,24 @@ function show_setup_dialog() {
 }
 
 /**
- * Fetches startup data from the server and configure the app.
+ * Read config and code/token data and configure the UI according to what we hve.
  */
-function do_startup_actions() {
-    console.log('INFO => in handle_refresh_button');
+function configure_app() {
     clear_response_area();
-
-    const url = `${api_base_url}/v1/get_startup_data`;
-
-    const opts = {
-        method: 'POST',
-        data: {
-            client_id: config.client_id,
-            client_secret: config.client_secret,
-            username: config.username
-        },
-        dataType: 'json'
-    };
-
-    $.ajax(url, opts)
-        .then((data, textStatus, jqXHR) => {
-            console.log('INFO => get_startup_data success');
-            if ('public_ip' in data) {
-                public_ip = data.public_ip;
+    show_busy();
+    get_startup_data()
+        .then(data => {
+            hide_busy();
+            if ('config' in data) {
+                config = data.config;
             }
+
+            if (config.username && config.client_id && config.client_secret) {
+                ui.login_button.show();
+            } else {
+                show_setup_dialog();
+            }
+
             if ('code' in data) {
                 set_response_area(data.code);
                 ui.request_token_button.show();
@@ -425,7 +483,44 @@ function do_startup_actions() {
                 hide_action_buttons();
             }
         })
-        .fail((jqXHR, textStatus, errorThrown) => {
-            console.log('ERROR => get_startup_data failed');
+        .catch(error => {
+            hide_busy();
         });
+}
+
+/**
+ * Fetches startup data from the server and configure the app.
+ * @returns {Promise} resolves with startup data, or rejects with error message.
+ */
+function get_startup_data() {
+    console.log('INFO => in handle_refresh_button');
+
+    let p = new Promise((resolve, reject) => {
+        const username = localStorage.getItem(username_cookie_name);
+        if (username) {
+            const url = `${api_base_url}/v1/get_startup_data`;
+
+            const opts = {
+                method: 'POST',
+                data: {
+                    username: username
+                },
+                dataType: 'json'
+            };
+
+            $.ajax(url, opts)
+                .then((data, textStatus, jqXHR) => {
+                    console.log('INFO => get_startup_data success');
+                    resolve(data);
+                })
+                .fail((jqXHR, textStatus, errorThrown) => {
+                    console.log('ERROR => get_startup_data failed');
+                    reject('Failed to get startup data');
+                });
+        } else {
+            show_setup_dialog();
+        }
+    });
+
+    return p;
 }

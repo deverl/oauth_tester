@@ -7,7 +7,7 @@ const ts = require('../server/ts');
  * Handler for the get_startup_data end point.
  */
 router.post('/get_startup_data', (req, res, next) => {
-    let code, token, token_string, username, o;
+    let code, token, config, username, o;
 
     if (req.body.username) {
         username = req.body.username;
@@ -16,12 +16,20 @@ router.post('/get_startup_data', (req, res, next) => {
 
         token = db.read_token(username);
 
+        config = db.read_config(username);
+
         if (code) {
             o = { code: code };
+            if (config) {
+                o.config = config;
+            }
         } else if (token) {
             let timestamp = new Date().getTime();
             if (token.expire_time_ms && token.expire_time_ms > timestamp) {
                 o = { token: token };
+                if (config) {
+                    o.config = config;
+                }
             } else {
                 o = { message: 'Token is invalid (expired)' };
             }
@@ -30,7 +38,47 @@ router.post('/get_startup_data', (req, res, next) => {
         }
     } else {
         res.status(400);
-        o = 'Invalid request';
+        o = { message: 'Invalid request' };
+    }
+
+    res.send(o);
+});
+
+/**
+ * Handler for the save_config end point.
+ */
+router.post('/save_config', (req, res, next) => {
+    let o,
+        body = req.body;
+
+    if (body.username && body.client_id && body.client_secret && body.api_server) {
+        db.save_config(body.username, body.client_id, body.client_secret, body.api_server);
+        o = { status: 'ok' };
+    } else {
+        res.status(400);
+        o = { status: 'fail', message: 'Invalid request' };
+    }
+
+    res.send(o);
+});
+
+/**
+ * Handler for the read_config end point.
+ */
+router.post('/read_config', (req, res, next) => {
+    let o,
+        body = req.body;
+
+    if (body.username) {
+        const config = db.read_config(body.username);
+        if (config) {
+            o = { status: 'ok', config: config };
+        } else {
+            o = { status: 'fail', message: 'No config found' };
+        }
+    } else {
+        res.status(400);
+        o = { status: 'fail', message: 'Invalid request' };
     }
 
     res.send(o);
