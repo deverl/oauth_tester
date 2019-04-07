@@ -23,6 +23,11 @@ This is a simple node app that provides a means of testing the TSheets OAuth flo
  * Enter your username (url), client\_id and client\_secret (from the API app)
  * You can then begin to use the oauth_test application
  
+ ### Environment
+ I have used Visual Studio Code as my editor for developing and testing the app. I have the prettier extension installed and there is a .prettierrc file to configure it.
+ 
+ The prettier extension formats the code on each save.
+ 
 ## Using The App
 
 ### Configure
