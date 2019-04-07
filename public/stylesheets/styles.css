@@ -86,7 +86,7 @@ div#form_container {
 }
 
 div.inner-container {
-    width: 420px;
+    width: 460px;
     margin-left: auto;
     margin-right: auto;
     background-color: white;
@@ -104,6 +104,10 @@ div.inner-container tr > td {
 
 div.inner-container tr > td:first-of-type {
     text-align: right;
+}
+
+td.label-td div {
+    width: 110px;
 }
 
 div.inner-container input[type='text'],
