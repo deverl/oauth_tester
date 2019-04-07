@@ -37,6 +37,7 @@ $(document).ready(() => {
     ui.dialog = $('#form_container');
 
     ui.form = {};
+    ui.form.close_x = $('div.inner-container div.dialog-close-x');
     ui.form.username = $('#username_input');
     ui.form.client_id = $('#client_id_input');
     ui.form.client_secret = $('#client_secret_input');
@@ -52,6 +53,11 @@ $(document).ready(() => {
         evt.stopPropagation();
         evt.preventDefault();
         handle_form_submit(evt);
+    });
+
+    ui.form.close_x.click(evt => {
+        ui.dialog.hide();
+        ui.overlay.hide();
     });
 
     ui.setup_button.click(handle_setup);

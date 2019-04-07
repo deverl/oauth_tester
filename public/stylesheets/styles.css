@@ -127,6 +127,15 @@ div.inner-container div.dialog-title {
     font-weight: bold;
     line-height: 1.5;
     margin-bottom: 25px;
+    display: inline-block;
+}
+
+div.inner-container div.dialog-close-x {
+    display: inline-block;
+    float: right;
+    margin-top: -12px;
+    margin-right: -12px;
+    cursor: pointer;
 }
 
 div.inner-container input[type='radio'] {
