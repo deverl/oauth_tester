@@ -24,7 +24,7 @@ This is a simple node app that provides a means of testing the TSheets OAuth flo
  * You can then begin to use the oauth_test application
  
  ### Development Environment
- I have used Visual Studio Code as my editor for developing and testing the app. I have the prettier extension installed and there is a .prettierrc file to configure it.
+ I have used Visual Studio Code as my editor for developing and testing the app. I have the [prettier](https://prettier.io/) extension installed and there is a .prettierrc file to configure it.
  
  #### Prettier
  
