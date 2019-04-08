@@ -158,6 +158,7 @@ function handle_login_button(evt) {
 
     $.ajax(url, opts)
         .then((data, textStatus, jqXHR) => {
+            ui.busy_overlay.hide();
             console.log(`INFO => save_state_data success. data: `, data);
             const base_api_url = get_base_api_url();
             if ('status' in data && data.status === 'ok') {
@@ -165,7 +166,6 @@ function handle_login_button(evt) {
                 const query_string = `client_id=${config.client_id}&state=${state}&redirect_uri=${redirect_uri}`;
                 const url = `${base_api_url}/v1/authorize?response_type=code&${query_string}`;
                 console.log(`DEBUG => redirect url: ${url}`);
-                hide_busy();
                 window.location.assign(url);
             } else {
                 let error = data.message ? data.message : 'unknown error';
@@ -173,7 +173,9 @@ function handle_login_button(evt) {
             }
         })
         .fail((jqXHR, textStatus, errorThrown) => {
-            set_response_area("Couldn't save state!");
+            hide_busy();
+            set_response_area("Couldn't save state.");
+            alert("API failure! Couldn't save state.");
         });
 }
 
