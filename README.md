@@ -38,7 +38,7 @@ The first time you open the app, you will be presented with a screen asking you 
 
 The dialog will look something like this:
 
-<img src="https://github.com/deverl/oauth_test/blob/master/docs/images/setup-dialog.png" width="400">
+<img src="https://github.com/deverl/oauth_test/blob/master/docs/images/setup-dialog.png" width="500">
 
 Enter all of these values and press the **OK** button to continue.
 
