@@ -42,6 +42,8 @@ The dialog will look something like this:
 
 Enter all of these values and press the **OK** button to continue.
 
+NOTE: You can reconfigure the app at any time by pressing the gear icon in the upper right of the window. This will bring up the setup dialog where you can change any/all of the configuration items.
+
 ### Login
 
 After entering your credentials, you will see a **Login** button. Pressing the Login button will initiate the OAuth flow. After saving the state in the node app server, the browser will be redirected to the authorize URL at TSheets. You will see the standard TSheets OAuth screens. Complete the login and control will be returned back to the OAuth tester app (to the handle\_oauth end point) where we will save the code and then display it on the app.
