@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a simple node app that provides a means of testing the TSheets OAuth flow. It demonstrates fetching a code, exchanging the code for a token, and doing a refresh of a token.
+This is a simple node app that provides a means of testing the TSheets OAuth flow. It demonstrates signing in to TSheets (which fetches a code), exchanging the code for a token, and doing a refresh of a token.
 
 ## Setup
 
