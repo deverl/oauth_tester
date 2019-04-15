@@ -7,7 +7,11 @@ const ts = require('../server/ts');
  * Handler for the get_startup_data end point.
  */
 router.post('/get_startup_data', (req, res, next) => {
-    let code, token, config, username, o;
+    let code,
+        token,
+        config,
+        username,
+        o = {};
 
     if (req.body.username) {
         username = req.body.username;
@@ -16,27 +20,25 @@ router.post('/get_startup_data', (req, res, next) => {
         token = db.read_token(username);
         config = db.read_config(username);
 
+        if (config) {
+            o.config = config;
+        }
+
         if (code) {
-            o = { code: code };
-            if (config) {
-                o.config = config;
-            }
+            o.code = code;
         } else if (token) {
             let timestamp = new Date().getTime();
             if (token.expire_time_ms && token.expire_time_ms > timestamp) {
-                o = { token: token };
-                if (config) {
-                    o.config = config;
-                }
+                o.token = token;
             } else {
-                o = { message: 'Token is invalid (expired)' };
+                o.message = 'Token is invalid (expired)';
             }
         } else {
-            o = { message: 'No token in storage' };
+            o.message = 'No token in storage';
         }
     } else {
         res.status(400);
-        o = { message: 'Invalid request' };
+        o.message = 'Invalid request';
     }
 
     res.send(o);
