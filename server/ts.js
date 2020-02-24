@@ -10,7 +10,7 @@ const db = require('./db');
  */
 function get_api_server_base_url(api_server, username) {
     let server_ext = '';
-    if (api_server === 'lntxweb1') {
+    if (api_server === 'armorweb01') {
         server_ext = '-dev';
     }
 
