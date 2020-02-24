@@ -8,7 +8,7 @@ This is a simple node app that provides a means of testing the TSheets OAuth flo
 
 ### In the TSheets App
 
- * Create a new API app (shazdev or lntxweb1)
+ * Create a new API app (shazdev or armorweb01)
  * Set the redirect\_uri to [http://localhost:3000/api/v1/oauth\_handler/](http://localhost:3000/api/v1/oauth\_handler/)
  * Note the client\_id and client\_secret (you will enter them in the oauth\_test app later)
 
@@ -17,24 +17,24 @@ This is a simple node app that provides a means of testing the TSheets OAuth flo
  * Clone the repo
  * npm install
  * npm start
- 
+
 ### Browser
  * Browse to [http://localhost:3000](http://localhost:3000)
  * Enter your username (url), client\_id and client\_secret (from the API app)
  * You can then begin to use the oauth_test application
- 
+
  ### Development Environment
  I have used Visual Studio Code as my editor for developing and testing the app. I have the [prettier](https://prettier.io/) extension installed and there is a .prettierrc file to configure it.
- 
+
  #### Prettier
- 
+
  The prettier extension formats the code on each save.
- 
+
 ## Using The App
 
 ### Configure
 
-The first time you open the app, you will be presented with a screen asking you for your username, and server (lntxweb1 or shazdev) and your client\_id and client\_secret (from your API app in TSheets).
+The first time you open the app, you will be presented with a screen asking you for your username, and server (armorweb01 or shazdev) and your client\_id and client\_secret (from your API app in TSheets).
 
 The dialog will look something like this:
 
@@ -67,7 +67,7 @@ The token will look something like this:
     "client_type": "business"
 }
 ```
-    
+
 
 After the token is obtained, we embed it in a data structure that also contains some meta data about the expiration. We add a timestamp (in milliseconds) when the token expires, along with a human readable expiration date and time.
 
