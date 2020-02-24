@@ -86,15 +86,15 @@ div#form_container {
 }
 
 div.inner-container {
-    width: 460px;
+    width: 480px;
     margin-left: auto;
     margin-right: auto;
     background-color: white;
     opacity: 1;
     padding: 20px;
     border: 2px solid gray;
-    border-radius: 14px;
-    font-size: 17px;
+    border-radius: 12px;
+    font-size: 18px;
     font-family: sans-serif;
 }
 
@@ -112,7 +112,10 @@ td.label-td div {
 
 div.inner-container input[type='text'],
 div.inner-container input[type='password'] {
-    font-size: 14px;
+    font-size: 18px;
+    padding: 2px 4px 2px 4px;
+    border-width: 1px;
+    border-radius: 4px;
 }
 
 div.inner-container input[name='client_id_input'],
