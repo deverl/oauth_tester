@@ -1,5 +1,7 @@
 const request = require('request');
 const db = require('./db');
+const constants = require('../constants/constants');
+
 
 /**
  * Utility function to create the API url to be used with TSheets for
@@ -39,7 +41,7 @@ function get_token(username, code) {
 
         const base_url = get_api_server_base_url(config.api_server, username);
         const url = `${base_url}/v1/grant`;
-        const redirect_uri = 'http://localhost:3000/api/v1/oauth_handler/';
+        const redirect_uri = `http://localhost:${constants.HTTP_PORT}/api/v1/oauth_handler/`;
 
         const opts = {
             url: url,
