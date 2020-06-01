@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../server/db');
 const ts = require('../server/ts');
+const constants = require('../constants/constants');
 
 /**
  * Handler for the get_startup_data end point.
@@ -23,6 +24,8 @@ router.post('/get_startup_data', (req, res, next) => {
         if (config) {
             o.config = config;
         }
+        
+        o.port = constants.HTTP_PORT;
 
         if (code) {
             o.code = code;

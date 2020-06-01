@@ -7,6 +7,8 @@ const api_server_cookie_name = 'api_server';
 
 const api_base_url = '/api';
 
+let http_port = 4000;
+
 let config = {
     username: null,
     client_id: null,
@@ -162,7 +164,7 @@ function handle_login_button(evt) {
             console.log(`INFO => save_state_data success. data: `, data);
             const base_api_url = get_base_api_url();
             if ('status' in data && data.status === 'ok') {
-                const redirect_uri = `http://localhost:4000/api/v1/oauth_handler/`;
+                const redirect_uri = `http://localhost:${http_port}/api/v1/oauth_handler/`;
                 const query_string = `client_id=${config.client_id}&state=${state}&redirect_uri=${redirect_uri}`;
                 const url = `${base_api_url}/v1/authorize?response_type=code&${query_string}`;
                 console.log(`DEBUG => redirect url: ${url}`);
@@ -465,6 +467,10 @@ function configure_app() {
         .then(data => {
             if ('config' in data) {
                 config = data.config;
+            }
+
+            if ('port' in data) {
+                http_port = data.port;
             }
 
             if (config.username && config.client_id && config.client_secret) {
