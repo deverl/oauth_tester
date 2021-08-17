@@ -523,11 +523,6 @@ neo-async@^2.6.0:
   resolved "https://registry.npmjs.intuit.com:443/artifactory/api/npm/npm-intuit/neo-async/-/neo-async-2.6.2.tgz"
   integrity sha1-tKr7k+OustgXTKU88WOrfXMIMF8=
 
-node-supervisor@^1.0.2:
-  version "1.0.2"
-  resolved "https://registry.npmjs.intuit.com:443/artifactory/api/npm/npm-intuit/node-supervisor/-/node-supervisor-1.0.2.tgz#ebc5f7fd6a09a66bc1268e15369c53b4ff0bf714"
-  integrity sha1-68X3/WoJpmvBJo4VNpxTtP8L9xQ=
-
 oauth-sign@~0.9.0:
   version "0.9.0"
   resolved "https://registry.npmjs.intuit.com:443/artifactory/api/npm/npm-intuit/oauth-sign/-/oauth-sign-0.9.0.tgz"
