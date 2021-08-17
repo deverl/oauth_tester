@@ -8,7 +8,7 @@ This is a simple node app that provides a means of testing the TSheets OAuth flo
 
 ### In the TSheets App
 
- * Create a new API app (shazdev or armorweb01)
+ * Create a new API app (amorweb-prd or armorweb01)
  * Set the redirect\_uri to [http://localhost:4000/api/v1/oauth\_handler/](http://localhost:4000/api/v1/oauth\_handler/)
  * Note the client\_id and client\_secret (you will enter them in the oauth\_test app later)
 
@@ -34,7 +34,7 @@ This is a simple node app that provides a means of testing the TSheets OAuth flo
 
 ### Configure
 
-The first time you open the app, you will be presented with a screen asking you for your username, and server (armorweb01 or shazdev) and your client\_id and client\_secret (from your API app in TSheets).
+The first time you open the app, you will be presented with a screen asking you for your username, and server (armorweb01 or amorweb-prd) and your client\_id and client\_secret (from your API app in TSheets).
 
 The dialog will look something like this:
 

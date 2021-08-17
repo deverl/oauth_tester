@@ -122,7 +122,7 @@ function clear_response_area() {
 function get_base_api_url() {
     let server_type;
 
-    if (config.api_server === 'shazdev') {
+    if (config.api_server === 'amorweb-prd') {
         server_type = '';
     } else {
         server_type = '-dev';
