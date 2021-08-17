@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../server/db');
-const ts = require('../server/ts');
+const ts = require('../server/qbt');
 const constants = require('../constants/constants');
 
 /**
@@ -24,7 +24,7 @@ router.post('/get_startup_data', (req, res, next) => {
         if (config) {
             o.config = config;
         }
-        
+
         o.port = constants.HTTP_PORT;
 
         if (code) {
