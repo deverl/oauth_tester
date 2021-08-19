@@ -1,11 +1,23 @@
 const fs = require('fs');
 
+const init = () => {
+    try {
+        if (!fs.existsSync('./db')) {
+            fs.mkdirSync('db');
+        } else {
+            delete_all_state();
+        }
+    } catch (e) {
+        console.log('ERROR: Exception: ' + e);
+    }
+};
+
 /**
  * Utility function that reads the contents of a file and returns it as a utf-8 string.
  * @param {string} path
  * @returns {string} the contents of the file.
  */
-const read_file = path => {
+const read_file = (path) => {
     let data = null;
     if (fs.existsSync(path)) {
         data = fs.readFileSync(path);
@@ -171,7 +183,7 @@ const get_state_files = () => {
         files;
     const path = `${global.appRoot}/db/`;
     files = fs.readdirSync(path);
-    state_files = files.filter(f => {
+    state_files = files.filter((f) => {
         return f.endsWith('.state');
     });
     return state_files;
@@ -183,7 +195,7 @@ const get_state_files = () => {
  */
 function delete_all_state() {
     let state_files = get_state_files();
-    state_files.map(f => {
+    state_files.map((f) => {
         const path = `${global.appRoot}/db/${f}`;
         fs.unlinkSync(path);
     });
@@ -196,7 +208,7 @@ function save_config(username, client_id, client_secret, api_server) {
             username: username,
             client_id: client_id,
             client_secret: client_secret,
-            api_server: api_server
+            api_server: api_server,
         };
         const data = JSON.stringify(config, null, 4);
         write_file(path, data);
@@ -222,6 +234,7 @@ function read_config(username) {
     return config;
 }
 
+module.exports.init = init;
 module.exports.store_code = store_code;
 module.exports.read_code = read_code;
 module.exports.delete_code = delete_code;
@@ -232,7 +245,6 @@ module.exports.delete_token = delete_token;
 
 module.exports.save_state = save_state;
 module.exports.get_username_from_state = get_username_from_state;
-module.exports.delete_all_state = delete_all_state;
 
 module.exports.save_config = save_config;
 module.exports.read_config = read_config;
