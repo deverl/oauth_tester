@@ -100,5 +100,4 @@ After a token has been obtained, you can refresh the token by pressing the **Ref
 
 ### Delete The Token
 
-At any time after obtaining a token, you can delete it from the app by pressing the **Delete Token** button. This simply removes it from the app. It **_does not_** invalidate or revoke the token with TS
-heets.
+At any time after obtaining a token, you can delete it from the app by pressing the **Delete Token** button. This simply removes it from the app. It **_does not_** invalidate or revoke the token with Quickbooks Time.
