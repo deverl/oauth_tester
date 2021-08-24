@@ -15,8 +15,9 @@ This is a simple node app that provides a means of testing the TSheets OAuth flo
 ### Workspace
 
  * Clone the repo
- * npm install
- * npm start
+ * nvm use
+ * yarn
+ * yarn start
 
 ### Browser
  * Browse to [http://localhost:4000](http://localhost:4000)
