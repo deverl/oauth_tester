@@ -2,11 +2,11 @@
 
 ## Overview
 
-This is a simple node app that provides a means of testing the TSheets OAuth flow. It demonstrates signing in to TSheets (which fetches a code), exchanging the code for a token, and doing a refresh of a token.
+This is a simple node app that provides a means of testing the Quickbooks Time OAuth flow. It demonstrates signing in to Quickbooks Time (which fetches a code), exchanging the code for a token, and doing a refresh of a token.
 
 ## Setup
 
-### In the TSheets App
+### In the Quickbooks Time App
 
  * Create a new API app (amorweb-prd or armorweb01)
  * Set the redirect\_uri to [http://localhost:4000/api/v1/oauth\_handler/](http://localhost:4000/api/v1/oauth\_handler/)
@@ -35,7 +35,7 @@ This is a simple node app that provides a means of testing the TSheets OAuth flo
 
 ### Configure
 
-The first time you open the app, you will be presented with a screen asking you for your username, and server (armorweb01 or amorweb-prd) and your client\_id and client\_secret (from your API app in TSheets).
+The first time you open the app, you will be presented with a screen asking you for your username, and server (armorweb01 or amorweb-prd) and your client\_id and client\_secret (from your API app in Quickbooks Time).
 
 The dialog will look something like this:
 
@@ -47,11 +47,11 @@ NOTE: You can reconfigure the app at any time by pressing the gear icon in the u
 
 ### Login
 
-After entering your credentials, you will see a **Login** button. Pressing the Login button will initiate the OAuth flow. After saving the state in the node app server, the browser will be redirected to the authorize URL at TSheets. You will see the standard TSheets OAuth screens. Complete the login and control will be returned back to the OAuth tester app (to the handle\_oauth end point) where we will save the code and then display it on the app.
+After entering your credentials, you will see a **Login** button. Pressing the Login button will initiate the OAuth flow. After saving the state in the node app server, the browser will be redirected to the authorize URL at Quickbooks Time. You will see the standard Quickbooks Time OAuth screens. Complete the login and control will be returned back to the OAuth tester app (to the handle\_oauth end point) where we will save the code and then display it on the app.
 
 ### Exchange Code For Token
 
-After the code is obtained from TSheets, it is displayed on the app. Normally, this step would be invisible to the user, but I wanted to visualize all of the steps in the process. Press the **Request Token** button to cause the app to exchange the code for an OAuth token.
+After the code is obtained from Quickbooks Time, it is displayed on the app. Normally, this step would be invisible to the user, but I wanted to visualize all of the steps in the process. Press the **Request Token** button to cause the app to exchange the code for an OAuth token.
 
 The token will look something like this:
 
@@ -95,7 +95,7 @@ The token, and its associated meta data, are stored in the app and will be somet
 
 ### Refresh The Token
 
-After a token has been obtained, you can refresh the token by pressing the **Refresh Token** button. This will perform a refresh token flow exchange with the TSheets server, store the new token (with associated meta data) and display the new token.
+After a token has been obtained, you can refresh the token by pressing the **Refresh Token** button. This will perform a refresh token flow exchange with the Quickbooks Time server, store the new token (with associated meta data) and display the new token.
 
 
 ### Delete The Token
