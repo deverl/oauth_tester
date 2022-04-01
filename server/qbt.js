@@ -2,7 +2,6 @@ const request = require('request');
 const db = require('./db');
 const constants = require('../constants/constants');
 
-
 /**
  * Utility function to create the API url to be used with TSheets for
  * the given username and server name.
@@ -13,10 +12,10 @@ const constants = require('../constants/constants');
 function get_api_server_base_url(api_server, username) {
     let server_ext = '';
     if (api_server === 'armorweb01') {
-        server_ext = '-dev';
+        server_ext = '-e2e';
     }
 
-    const url = `https://${username}.tsheets${server_ext}.com/api`;
+    const url = `https://${username}.tsheets${server_ext}.intuit.com/api`;
 
     return url;
 }
@@ -50,8 +49,8 @@ function get_token(username, code) {
                 client_id: config.client_id,
                 client_secret: config.client_secret,
                 code: code,
-                redirect_uri: redirect_uri
-            }
+                redirect_uri: redirect_uri,
+            },
         };
 
         request.post(opts, (err, httpResponse, body) => {
@@ -115,14 +114,14 @@ function refresh_token(username) {
             const opts = {
                 url: url,
                 headers: {
-                    Authorization: `Bearer ${token.access_token}`
+                    Authorization: `Bearer ${token.access_token}`,
                 },
                 form: {
                     grant_type: 'refresh_token',
                     client_id: config.client_id,
                     client_secret: config.client_secret,
-                    refresh_token: token.refresh_token
-                }
+                    refresh_token: token.refresh_token,
+                },
             };
 
             console.log(`DEBUG => (do_refresh_token, before post): opts = ${JSON.stringify(opts)}.`);

@@ -13,7 +13,7 @@ let config = {
     username: null,
     client_id: null,
     client_secret: null,
-    api_server: null
+    api_server: null,
 };
 
 let ui = {
@@ -23,7 +23,7 @@ let ui = {
     request_token_button: null,
     delete_token_button: null,
     overlay: null,
-    busy_overlay: null
+    busy_overlay: null,
 };
 
 $(document).ready(() => {
@@ -51,13 +51,13 @@ $(document).ready(() => {
     ui.request_token_button.click(handle_request_token);
     ui.delete_token_button.click(handle_delete_token);
 
-    $('form#oauth_config_form').on('submit', evt => {
+    $('form#oauth_config_form').on('submit', (evt) => {
         evt.stopPropagation();
         evt.preventDefault();
         handle_form_submit(evt);
     });
 
-    ui.form.close_x.click(evt => {
+    ui.form.close_x.click((evt) => {
         ui.dialog.hide();
         ui.overlay.hide();
     });
@@ -125,10 +125,10 @@ function get_base_api_url() {
     if (config.api_server === 'amorweb-prd') {
         server_type = '';
     } else {
-        server_type = '-dev';
+        server_type = '-e2e';
     }
 
-    const url = `https://${config.username}.tsheets${server_type}.com/api`;
+    const url = `https://${config.username}.tsheets${server_type}.intuit.com/api`;
 
     console.log(`DEUBG => base_api_url = ${url}`);
 
@@ -153,9 +153,9 @@ function handle_login_button(evt) {
         method: 'POST',
         data: {
             username: config.username,
-            state: state
+            state: state,
         },
-        dataType: 'json'
+        dataType: 'json',
     };
 
     $.ajax(url, opts)
@@ -192,9 +192,9 @@ function handle_refresh_button(evt) {
     const opts = {
         method: 'POST',
         data: {
-            username: config.username
+            username: config.username,
         },
-        dataType: 'json'
+        dataType: 'json',
     };
 
     $.ajax(url, opts)
@@ -236,9 +236,9 @@ function handle_delete_token(evt) {
     const opts = {
         method: 'POST',
         data: {
-            username: config.username
+            username: config.username,
         },
-        dataType: 'json'
+        dataType: 'json',
     };
 
     $.ajax(url, opts)
@@ -287,9 +287,9 @@ function handle_request_token(evt) {
         method: 'POST',
         data: {
             username: config.username,
-            code: code
+            code: code,
         },
-        dataType: 'json'
+        dataType: 'json',
     };
 
     $.ajax(url, opts)
@@ -340,7 +340,7 @@ function load_config() {
         const username = localStorage.getItem(username_cookie_name);
 
         read_config(username)
-            .then(cfg => {
+            .then((cfg) => {
                 config = cfg;
                 ui.form.username.val(config.username);
                 ui.form.client_id.val(config.client_id);
@@ -349,7 +349,7 @@ function load_config() {
                 $(`input[value=${config.api_server}]`).prop('checked', true);
                 resolve();
             })
-            .catch(error => {
+            .catch((error) => {
                 reject(error);
             });
     });
@@ -372,9 +372,9 @@ function save_config(config) {
             username: config.username,
             client_id: config.client_id,
             client_secret: config.client_secret,
-            api_server: config.api_server
+            api_server: config.api_server,
         },
-        dataType: 'json'
+        dataType: 'json',
     };
 
     $.ajax(url, opts)
@@ -408,9 +408,9 @@ function read_config(username) {
         const opts = {
             method: 'POST',
             data: {
-                username: username
+                username: username,
             },
-            dataType: 'json'
+            dataType: 'json',
         };
 
         $.ajax(url, opts)
@@ -464,7 +464,7 @@ function show_setup_dialog() {
 function configure_app() {
     clear_response_area();
     get_startup_data()
-        .then(data => {
+        .then((data) => {
             if ('config' in data) {
                 config = data.config;
             }
@@ -491,7 +491,7 @@ function configure_app() {
                 hide_action_buttons();
             }
         })
-        .catch(error => {});
+        .catch((error) => {});
 }
 
 /**
@@ -509,9 +509,9 @@ function get_startup_data() {
             const opts = {
                 method: 'POST',
                 data: {
-                    username: username
+                    username: username,
                 },
-                dataType: 'json'
+                dataType: 'json',
             };
 
             $.ajax(url, opts)
