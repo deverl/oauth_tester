@@ -3,18 +3,12 @@ const util = Utility();
 const CONFIG_NAME_KEY_NAME = 'config_name';
 const API_BASE_URL = '/api';
 const DEFAULT_HTTP_PORT = 4000;
+const EMPTY_CONFIG = { name: '', username: '', server: '', client_id: '', client_secret: '', e2e: false };
+const E2E_SUFFIX = '-e2e';
 
 let http_port = DEFAULT_HTTP_PORT;
 
-let config = {
-    id: null,
-    name: null,
-    username: null,
-    server: null,
-    client_id: null,
-    client_secret: null,
-    e2e: false,
-};
+let config = EMPTY_CONFIG;
 
 let config_list = [];
 
@@ -30,6 +24,7 @@ let ui = {
 
 $(document).ready(() => {
     ui.login_button = $('#login_to_tsheets');
+    ui.config_name = $('#config_name_header');
     ui.response_area = $('#response_body');
     ui.refresh_token_button = $('#refresh_token_button');
     ui.request_token_button = $('#request_token');
@@ -154,7 +149,7 @@ const get_base_api_url = () => {
     let server_type;
 
     if (config.e2e) {
-        server_type = '-e2e';
+        server_type = E2E_SUFFIX;
     } else {
         server_type = '';
     }
@@ -454,9 +449,10 @@ const handle_delete_config_delete_clicked = (evt) => {
  */
 const handle_new_config_clicked = (evt) => {
     console.log('Add new config clicked');
-    config = {};
+    config = EMPTY_CONFIG;
     clear_current_config();
     populate_setup_dialog();
+    clear_response_area();
     ui.form.config_name.focus();
 };
 
@@ -615,6 +611,8 @@ const hide_setup_dialog = () => {
  * Puts values in all of the edit fields.
  */
 const populate_setup_dialog = () => {
+    const config_name = config && config.name ? config.name : '';
+    ui.config_name.text(config_name);
     load_config_list_values();
     ui.form.config_name.val(config.name);
     ui.form.username.val(config.username);
