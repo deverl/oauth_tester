@@ -1,20 +1,20 @@
 /**
  * Returns an object containing sundry utility functions
  */
-function Utility() {
-    function set_cookie(cname, cvalue, exdays) {
+const Utility = () => {
+    const set_cookie = (cname, cvalue, exdays) => {
         var d = new Date();
         d.setTime(d.getTime() + exdays * 24 * 60 * 60 * 1000);
         var expires = 'expires=' + d.toUTCString();
         document.cookie = cname + '=' + cvalue + ';' + expires + ';path=/';
-    }
+    };
 
     /**
      * Utility method to read the value of a cookie.
      * @param {string} cname -- name of the cookie
      * @returns {string} The value of the cookie if found, null otherwise.
      */
-    function get_cookie(cname) {
+    const get_cookie = (cname) => {
         var name = cname + '=';
         var decodedCookie = decodeURIComponent(document.cookie);
         var ca = decodedCookie.split(';');
@@ -28,14 +28,14 @@ function Utility() {
             }
         }
         return '';
-    }
+    };
 
     /**
      * Creates a value to be used as the 'state' query parameter when we initiate the OAuth flow with TSheets.
      * @returns {string} random string to be used as state
      */
-    function create_state() {
-        let s = 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const create_state = () => {
+        let s = 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
             let r = (Math.random() * 16) | 0,
                 v = c == 'x' ? r : (r & 0x3) | 0x8;
             return v.toString(16);
@@ -48,14 +48,14 @@ function Utility() {
         let state = `${t}.${s}`;
 
         return state;
-    }
+    };
 
     /**
      * Parses a query string into an array of key-value pairs.
      * @param {string} query_string
      * @returns {Array} The parsed query string as key-value pairs.
      */
-    function parse_query_string(query_string) {
+    const parse_query_string = (query_string) => {
         let vars = [];
 
         if (query_string && typeof query_string === 'string') {
@@ -74,12 +74,12 @@ function Utility() {
         }
 
         return vars;
-    }
+    };
 
     return {
         set_cookie: set_cookie,
         get_cookie: get_cookie,
         create_state: create_state,
-        parse_query_string: parse_query_string
+        parse_query_string: parse_query_string,
     };
-}
+};

@@ -5,40 +5,36 @@ const constants = require('../constants/constants');
 /**
  * Utility function to create the API url to be used with TSheets for
  * the given username and server name.
- * @param {string} api_server
- * @param {string} username
+ * @param {Object} config
  * @returns {string} The base API URL to use with TSheets.
  */
-function get_api_server_base_url(api_server, username) {
+const get_api_server_base_url = (config) => {
     let server_ext = '';
-    if (api_server === 'armorweb01') {
+    if (config.e2e) {
         server_ext = '-e2e';
     }
 
-    const url = `https://${username}.tsheets${server_ext}.intuit.com/api`;
+    const url = `https://${config.username}.tsheets${server_ext}.intuit.com/api`;
 
     return url;
-}
+};
 
 /**
  * Handles the details of exchanging a code for a token. If a token is obtained, it is stored in the database.
- * @param {string} username
+ * @param {Object} config
  * @param {string} code
  * @returns {Promise} Resolved with the token, or rejected with an error message.
  */
-function get_token(username, code) {
-    console.log(`DEBUG => (get_token): username = ${JSON.stringify(username)}`);
-    console.log(`DEBUG => (get_token): code = ${JSON.stringify(code)}`);
+const get_token = (config, code) => {
+    console.log(`DEBUG: (get_token): config = ${JSON.stringify(config)}`);
 
     let p = new Promise((resolve, reject) => {
-        const config = db.read_config(username);
-
-        if (!config) {
+        if (!config || !config.username || !config.server) {
             reject('Invalid config!');
             return;
         }
 
-        const base_url = get_api_server_base_url(config.api_server, username);
+        const base_url = get_api_server_base_url(config);
         const url = `${base_url}/v1/grant`;
         const redirect_uri = `http://localhost:${constants.HTTP_PORT}/api/v1/oauth_handler/`;
 
@@ -69,8 +65,8 @@ function get_token(username, code) {
                     console.error(`ERROR: (get_token): token.error = ${token.error}`);
                     reject(token.error);
                 } else {
-                    db.store_token(username, token);
-                    token = db.read_token(username);
+                    db.save_token(config.name, token);
+                    token = db.read_token(config.name);
                     resolve(token);
                 }
             }
@@ -78,24 +74,22 @@ function get_token(username, code) {
     });
 
     return p;
-}
+};
 
 /**
  * Handles the details of refreshing a TSheets OAuth token.
  * If a new token is obtained, it is stored in the database.
- * @param {string} username
+ * @param {Object} config
  * @returns {Promise} Resolved with the new token, or rejected with an error message.
  */
-function refresh_token(username) {
+const refresh_token = (config) => {
     let p = new Promise((resolve, reject) => {
-        const config = db.read_config(username);
-
         if (!config) {
             reject('No configuration');
             return;
         }
 
-        let token_wrapper = db.read_token(username);
+        let token_wrapper = db.read_token(config.name);
 
         console.log(`DEBUG (do_refresh_token): token_wrapper = ${JSON.stringify(token_wrapper)}`);
 
@@ -108,7 +102,7 @@ function refresh_token(username) {
         let token = token_wrapper.token;
 
         if ('refresh_token' in token) {
-            const base_url = get_api_server_base_url(config.api_server, username);
+            const base_url = get_api_server_base_url(config);
             const url = `${base_url}/v1/grant`;
 
             const opts = {
@@ -124,7 +118,7 @@ function refresh_token(username) {
                 },
             };
 
-            console.log(`DEBUG => (do_refresh_token, before post): opts = ${JSON.stringify(opts)}.`);
+            console.log(`DEBUG: (do_refresh_token, before post): opts = ${JSON.stringify(opts)}.`);
 
             const d1 = new Date();
 
@@ -135,18 +129,18 @@ function refresh_token(username) {
                 const elapsed = t2 - t1;
 
                 console.log(
-                    `DEBUG => (do_refresh_token, back from post): err = ${JSON.stringify(err)}, httpResponse = ${JSON.stringify(
+                    `DEBUG: (do_refresh_token, back from post): err = ${JSON.stringify(err)}, httpResponse = ${JSON.stringify(
                         httpResponse
                     )}, body = ${JSON.stringify(body)}, elapsed = ${elapsed}`
                 );
 
                 if (err) {
-                    console.error(`ERROR => (do_refresh_token): err = ${err}`);
+                    console.error(`ERROR: (do_refresh_token): err = ${err}`);
                     reject(err);
                 } else {
                     token = JSON.parse(body);
-                    db.store_token(username, token);
-                    token = db.read_token(username);
+                    db.save_token(config.name, token);
+                    token = db.read_token(config.name);
                     if (token) {
                         resolve(token);
                     } else {
@@ -155,12 +149,12 @@ function refresh_token(username) {
                 }
             });
         } else {
-            reject('ERROR => (do_refresh_token) no refresh token');
+            reject('ERROR: (do_refresh_token) no refresh token');
         }
     });
 
     return p;
-}
+};
 
 module.exports.get_api_server_base_url = get_api_server_base_url;
 module.exports.get_token = get_token;

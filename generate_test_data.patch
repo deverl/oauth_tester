@@ -1,0 +1,123 @@
+diff --git a/oauth_test.db b/oauth_test.db
+index 6cb3988..5fa333b 100644
+Binary files a/oauth_test.db and b/oauth_test.db differ
+diff --git a/server/db.js b/server/db.js
+index 1b189eb..86b145b 100644
+--- a/server/db.js
++++ b/server/db.js
+@@ -45,11 +45,115 @@ const init = () => {
+         createStateTableStateIndex.run();
+ 
+         delete_all_state();
++
++        populate_test_data();
+     } catch (e) {
+         console.log('ERROR: Exception: ' + JSON.stringify(e));
+     }
+ };
+ 
++/**
++ * Write some test data into the database.
++ */
++function populate_test_data() {
++    const q = db.prepare(`SELECT username FROM config WHERE name = 'test1' AND username = 'test1' AND server = 'test1server'`);
++    const r = q.get();
++
++    if (r && r.username) {
++        return;
++    }
++
++    const config1 = {
++        name: 'test1',
++        username: 'test1',
++        server: 'test1server',
++        client_id: '9A6E4B72-5AE3-4FBF-8D66-3022E8700D87',
++        client_secret: '78BD0DD0-4E37-4654-9753-D22911BF5F70',
++        e2e: 1,
++    };
++
++    save_config(config1);
++
++    const config2 = {
++        name: 'test2',
++        username: 'test2',
++        server: 'test2server',
++        client_id: '8BFA6E9E-5704-4B42-80C1-8A41976794F6',
++        client_secret: 'F1CD93C7-131E-4E43-A138-0D8DA58621BA',
++        e2e: 0,
++    };
++
++    save_config(config2);
++
++    const config3 = {
++        name: 'test3',
++        username: 'test3',
++        server: 'test3server',
++        client_id: '4F7FCE3B-D2F8-4859-8A7C-CCEA26F23BCF',
++        client_secret: '9C77C67C-CAC4-40C7-ACEB-92235FD086B0',
++        e2e: 0,
++    };
++
++    save_config(config3);
++
++    const config4 = {
++        name: 'dstokes:amorweb01',
++        username: 'dstokes',
++        server: 'amorweb01',
++        client_id: 'ee778c5e424c4a33804abc7fa6e25f68',
++        client_secret: '7cafdce28edb43a5824ec26cb6c31dfb',
++        e2e: 1,
++    };
++
++    save_config(config4);
++
++    const state1 = 'E0C6369A-8315-4677-9EF4-EDA72D7D8EA9';
++
++    save_state(config1.name, state1);
++
++    const c2 = get_config_from_state(state1);
++
++    if (c2) {
++        console.log('c2 = ' + JSON.stringify(c2));
++    } else {
++        console.error('ERROR: (populate_test_data) Failed to read state c2');
++    }
++
++    const code2 = '9234927349872398472983479284';
++
++    save_code(config2.name, code2);
++
++    const c3 = read_code(config2.name);
++
++    if (c3) {
++        console.log('c3 = ' + JSON.stringify(c3));
++    } else {
++        console.error('ERROR: (populate_test_data) Failed to read code c3');
++    }
++
++    const token1 = {
++        access_token: 'S.1__5376E0E0-96C4-42FB-998E-CDD6DE87BC9B',
++        expires_in: 864000,
++        token_type: 'bearer',
++        scope: '',
++        refresh_token: 'S.1__3F7AA051-7F9C-42BE-A617-533D0A1809D8',
++        user_id: '134103498',
++        company_id: '91248925',
++        client_url: '${config3.server}',
++        client_type: 'exempt',
++    };
++
++    save_token(config3.name, token1);
++
++    const c4 = read_token(config3.name);
++
++    if (c4) {
++        console.log('c4 = ' + JSON.stringify(c4));
++    } else {
++        console.error('ERROR: (populate_test_data) Failed to read token c4');
++    }
++}
++
+ /**
+  * Lookup a config from the config name.
+  * @param {string} config_name

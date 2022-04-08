@@ -1,20 +1,22 @@
 const util = Utility();
 
-const username_cookie_name = 'username';
-const client_id_cookie_name = 'client_id';
-const client_secret_cookie_name = 'client_secret';
-const api_server_cookie_name = 'api_server';
+const CONFIG_NAME_KEY_NAME = 'config_name';
+const API_BASE_URL = '/api';
+const DEFAULT_HTTP_PORT = 4000;
 
-const api_base_url = '/api';
-
-let http_port = 4000;
+let http_port = DEFAULT_HTTP_PORT;
 
 let config = {
+    id: null,
+    name: null,
     username: null,
+    server: null,
     client_id: null,
     client_secret: null,
-    api_server: null,
+    e2e: false,
 };
+
+let config_list = [];
 
 let ui = {
     response_area: null,
@@ -40,11 +42,17 @@ $(document).ready(() => {
 
     ui.form = {};
     ui.form.close_x = $('div.inner-container div.dialog-close-x');
+    ui.form.config_list = $('#config_list');
+    ui.form.add_new_config_button = $('#add_new_config');
+    ui.form.config_name = $('#config_name_input');
     ui.form.username = $('#username_input');
+    ui.form.server = $('#server_input');
     ui.form.client_id = $('#client_id_input');
     ui.form.client_secret = $('#client_secret_input');
-    // ui.form.cancel = $("#form_cancel_button");
-    // ui.form.submit = $('#form_submit_button');
+    ui.form.e2e = $('#e2e_checkbox');
+    ui.form.submit_button = $('#form_submit_button');
+
+    ui.form.submit_button.prop('disabled', true);
 
     ui.login_button.click(handle_login_button);
     ui.refresh_token_button.click(handle_refresh_button);
@@ -68,91 +76,114 @@ $(document).ready(() => {
 });
 
 /**
+ * Checks to see if we have values for all fields, and enable the submit button if so.
+ */
+const handle_config_item_changed = (evt) => {
+    const name = ui.form.config_name.val();
+    const username = ui.form.username.val();
+    const server = ui.form.server.val();
+    const client_id = ui.form.client_id.val();
+    const client_secret = ui.form.client_secret.val();
+
+    console.info(`INFO: (handle_config_item_changed) name = ${name}`);
+    console.info(`INFO: (handle_config_item_changed) username = ${username}`);
+    console.info(`INFO: (handle_config_item_changed) server = ${server}`);
+    console.info(`INFO: (handle_config_item_changed) client_id = ${client_id}`);
+    console.info(`INFO: (handle_config_item_changed) client_secret = ${client_secret}`);
+
+    if (name && username && server && client_id && client_secret) {
+        ui.form.submit_button.prop('disabled', false);
+    } else {
+        ui.form.submit_button.prop('disabled', true);
+    }
+};
+
+/**
  * Puts up the overlay and the busy spinner.
  */
-function show_busy() {
+const show_busy = () => {
     ui.overlay.show();
     ui.busy_overlay.show();
-}
+};
 
 /**
  * Removes the overlay and the busy spinner.
  */
-function hide_busy() {
+const hide_busy = () => {
     ui.overlay.hide();
     ui.busy_overlay.hide();
-}
+};
 
 /**
  * Hides the action buttons, and conditionally hides the login button.
  * @param {boolean} hide_all if true, hides all of the action buttons, including the login buttons.
  */
-function hide_action_buttons(hide_all = false) {
+const hide_action_buttons = (hide_all = false) => {
     if (hide_all) {
         ui.login_button.hide();
     }
     ui.refresh_token_button.hide();
     ui.request_token_button.hide();
     ui.delete_token_button.hide();
-}
+};
 
 /**
  * Puts a string in the response area.
  * @param {string|object} s -- the string, or object, to display
  */
-function set_response_area(s) {
-    if (typeof s === 'object') {
+const set_response_area = (s) => {
+    if (typeof s !== 'string') {
         s = JSON.stringify(s, null, 4);
     }
     ui.response_area.text(s);
-}
+};
 
 /**
  * Sets the response area to an empty string, effectively clearing it.
  */
-function clear_response_area() {
+const clear_response_area = () => {
     set_response_area('');
-}
+};
 
 /**
  * Utility function to create the API url to be used with TSheets for
  * the current username and server name.
  * @returns {string} The base API URL to use with TSheets.
  */
-function get_base_api_url() {
+const get_base_api_url = () => {
     let server_type;
 
-    if (config.api_server === 'amorweb-prd') {
-        server_type = '';
-    } else {
+    if (config.e2e) {
         server_type = '-e2e';
+    } else {
+        server_type = '';
     }
 
     const url = `https://${config.username}.tsheets${server_type}.intuit.com/api`;
 
-    console.log(`DEUBG => base_api_url = ${url}`);
+    console.info(`DEBUG: (get_base_api_url) base_api_url = ${url}`);
 
     return url;
-}
+};
 
 /**
  * Handler for the login button.
  * @param {Event} evt
  */
-function handle_login_button(evt) {
-    console.log('INFO => in handle_login_button');
+const handle_login_button = (evt) => {
+    console.log('INFO: in handle_login_button');
     hide_action_buttons();
     clear_response_area();
     show_busy();
 
     const state = util.create_state();
 
-    const url = `${api_base_url}/v1/save_state_data`;
+    const url = `${API_BASE_URL}/v1/save_state_data`;
 
     const opts = {
         method: 'POST',
         data: {
-            username: config.username,
+            config_name: config.name,
             state: state,
         },
         dataType: 'json',
@@ -161,13 +192,13 @@ function handle_login_button(evt) {
     $.ajax(url, opts)
         .then((data, textStatus, jqXHR) => {
             ui.busy_overlay.hide();
-            console.log(`INFO => save_state_data success. data: `, data);
+            console.log(`INFO: save_state_data success. data: `, data);
             const base_api_url = get_base_api_url();
             if ('status' in data && data.status === 'ok') {
                 const redirect_uri = `http://localhost:${http_port}/api/v1/oauth_handler/`;
                 const query_string = `client_id=${config.client_id}&state=${state}&redirect_uri=${redirect_uri}`;
                 const url = `${base_api_url}/v1/authorize?response_type=code&${query_string}`;
-                console.log(`DEBUG => redirect url: ${url}`);
+                console.log(`DEBUG: redirect url: ${url}`);
                 window.location.assign(url);
             } else {
                 let error = data.message ? data.message : 'unknown error';
@@ -179,20 +210,24 @@ function handle_login_button(evt) {
             set_response_area("Couldn't save state.");
             alert("API failure! Couldn't save state.");
         });
-}
+};
 
-function handle_refresh_button(evt) {
-    console.log('INFO => in handle_refresh_button');
+/**
+ * Handler for when the refresh token button is clicked.
+ * @param {*} evt
+ */
+const handle_refresh_button = (evt) => {
+    console.log('INFO: in handle_refresh_button');
     clear_response_area();
     hide_action_buttons();
     show_busy();
 
-    const url = `${api_base_url}/v1/refresh_token`;
+    const url = `${API_BASE_URL}/v1/refresh_token`;
 
     const opts = {
         method: 'POST',
         data: {
-            username: config.username,
+            config_name: config.name,
         },
         dataType: 'json',
     };
@@ -200,43 +235,34 @@ function handle_refresh_button(evt) {
     $.ajax(url, opts)
         .then((data, textStatus, jqXHR) => {
             hide_busy();
-            console.log('INFO => refresh_token success');
+            console.log('INFO: refresh_token success');
             if (data.token) {
-                let s = '';
-
-                if (typeof data.token === 'string') {
-                    let o = JSON.parse(data.token);
-                    s = JSON.stringify(o, null, 4);
-                } else {
-                    s = JSON.stringify(data.token, null, 4);
-                }
-
-                set_response_area(s);
+                set_response_area(data.token);
                 ui.refresh_token_button.show();
                 ui.delete_token_button.show();
             }
         })
         .fail((jqXHR, textStatus, errorThrown) => {
             hide_busy();
-            console.log('ERROR => refresh_token failed');
+            console.log('ERROR: refresh_token failed');
         });
-}
+};
 
 /**
  * Handler for the delete-token button.
  * @param {Event} evt
  */
-function handle_delete_token(evt) {
+const handle_delete_token = (evt) => {
     hide_action_buttons();
     set_response_area('');
     show_busy();
 
-    const url = `${api_base_url}/v1/delete_token`;
+    const url = `${API_BASE_URL}/v1/delete_token`;
 
     const opts = {
         method: 'POST',
         data: {
-            username: config.username,
+            config_name: config.name,
         },
         dataType: 'json',
     };
@@ -264,16 +290,16 @@ function handle_delete_token(evt) {
         })
         .fail((jqXHR, textStatus, errorThrown) => {
             hide_busy();
-            console.log('ERROR => delete_token failed');
+            console.log('ERROR: delete_token failed');
         });
-}
+};
 
 /**
  * Handler for the request-token button.
  * @param {Event} evt
  */
-function handle_request_token(evt) {
-    console.log('INFO => in handle_request_token');
+const handle_request_token = (evt) => {
+    console.log('INFO: in handle_request_token');
 
     const code = ui.response_area.text();
 
@@ -281,12 +307,12 @@ function handle_request_token(evt) {
     hide_action_buttons();
     show_busy();
 
-    const url = `${api_base_url}/v1/exchange_code_for_token`;
+    const url = `${API_BASE_URL}/v1/exchange_code_for_token`;
 
     let opts = {
         method: 'POST',
         data: {
-            username: config.username,
+            config_name: config.name,
             code: code,
         },
         dataType: 'json',
@@ -295,9 +321,9 @@ function handle_request_token(evt) {
     $.ajax(url, opts)
         .then((data, textStatus, jqXHR) => {
             hide_busy();
-            console.log('INFO => exchange_code_for_token success');
+            console.log('INFO: exchange_code_for_token success');
             if ('token' in data) {
-                set_response_area(data);
+                set_response_area(data.token);
                 ui.refresh_token_button.show();
                 ui.delete_token_button.show();
             }
@@ -306,47 +332,50 @@ function handle_request_token(evt) {
             hide_busy();
             set_response_area(errorThrown);
         });
-}
+};
 
 /**
  * Verifies that the required fields are present, and if so saves them as the current config.
  * @param {Event} evt
  */
-function handle_form_submit(evt) {
+const handle_form_submit = (evt) => {
+    config.name = ui.form.config_name.val();
     config.username = ui.form.username.val();
+    config.server = ui.form.server.val();
     config.client_id = ui.form.client_id.val();
     config.client_secret = ui.form.client_secret.val();
-    config.api_server = $('input[name=api_server]:checked').val();
+    config.e2e = ui.form.e2e.is(':checked');
     console.log('INFO handle_form_submit, config: ', config);
-    if (config.username && config.client_id && config.client_secret) {
-        ui.dialog.hide();
-        ui.overlay.hide();
-
+    if (config.name && config.username && config.server && config.client_id && config.client_secret) {
+        hide_setup_dialog();
         save_config(config);
-
         ui.login_button.show();
-        get_startup_data();
+        // get_startup_data();
     } else {
         alert('All fields are required!');
     }
-}
+};
 
 /**
  * Reads configuration data from cookies into the global config object, and sets the values into the form.
  * @returns {Promise} resolved on success, or rejected with an error string.
  */
-function load_config() {
+const load_config = () => {
     let p = new Promise((resolve, reject) => {
-        const username = localStorage.getItem(username_cookie_name);
+        const username = get_current_config();
 
         read_config(username)
             .then((cfg) => {
                 config = cfg;
+                // Load config_list values.
+                load_config_list_values();
+                // Load form values.
+                ui.form.config_name.val(config.name);
                 ui.form.username.val(config.username);
+                ui.form.server.val(config.server);
                 ui.form.client_id.val(config.client_id);
                 ui.form.client_secret.val(config.client_secret);
-
-                $(`input[value=${config.api_server}]`).prop('checked', true);
+                ui.form.e2e.prop('checked', config.e2e);
                 resolve();
             })
             .catch((error) => {
@@ -355,31 +384,110 @@ function load_config() {
     });
 
     return p;
-}
+};
+
+/**
+ * Sets up the config list in the setup dialog using global values.
+ */
+const load_config_list_values = () => {
+    $('.config-list-item').off('click');
+    ui.form.config_list.empty();
+    $.each(config_list, (idx, val) => {
+        const $text = $(`<div class='config-list-item-text'>${val}</div>`);
+        const $icon = $(`<div class='config-list-item-icon'><i class="trash alternate icon"></i></div>`);
+        const $item = $(`<div class='config-list-item'></div>`);
+        $item.append($text);
+        $item.append($icon);
+        if (val === config.name) {
+            $item.addClass('selected');
+        }
+        ui.form.config_list.append($item);
+    });
+
+    $('.config-list-item').on('click', handle_config_list_item_name_clicked);
+    $('.config-list-item-text').on('click', handle_config_list_item_name_clicked);
+    $('.config-list-item-icon').on('click', handle_delete_config_delete_clicked);
+};
+
+/**
+ * Handler for when a config name is clicked in the config list.
+ * @param {*} evt
+ */
+const handle_config_list_item_name_clicked = (evt) => {
+    const $e = $(evt.currentTarget);
+    const config_name = $e.text();
+    if (config_name) {
+        set_current_config(config_name);
+        get_startup_data(config_name).then((data) => {
+            // Startup data has already been copied into global data.
+            populate_setup_dialog();
+            handle_config_item_changed();
+        });
+    }
+};
+
+/**
+ * Handler for when the trash icon is clicked in a config list item.
+ * @param {*} evt
+ */
+const handle_delete_config_delete_clicked = (evt) => {
+    const $e = $(evt.currentTarget);
+    const $parent = $e.parent();
+    const $title = $parent.find('.config-list-item-text');
+    const config_name = $title.text();
+    if (config_name) {
+        console.log(`Clicked on delete for config ${config_name}`);
+        if (confirm(`Are you sure you want to delete the ${config_name} configuration?`)) {
+            console.log(`Delete configuration: ${config_name}`);
+            delete_config(config_name)
+                .then(() => {})
+                .catch((err) => {});
+        }
+    } else {
+        console.log("Couldn't find config item in delete event handler");
+    }
+};
+
+/**
+ * Handles clicks on the "add new config" button
+ * @param {*} evt
+ */
+const handle_new_config_clicked = (evt) => {
+    console.log('Add new config clicked');
+    config = {};
+    clear_current_config();
+    populate_setup_dialog();
+    ui.form.config_name.focus();
+};
 
 /**
  * Saves the config on the server.
  * @param {Object} config
  */
-function save_config(config) {
-    localStorage.setItem(username_cookie_name, config.username);
+const save_config = (config) => {
+    set_current_config(config.name);
 
-    const url = `${api_base_url}/v1/save_config`;
+    const url = `${API_BASE_URL}/v1/save_config`;
 
     const opts = {
         method: 'POST',
         data: {
+            id: config.id,
+            name: config.name,
             username: config.username,
+            server: config.server,
             client_id: config.client_id,
             client_secret: config.client_secret,
             api_server: config.api_server,
+            e2e: config.e2e ? 1 : 0,
         },
         dataType: 'json',
     };
 
     $.ajax(url, opts)
         .then((data, textStatus, jqXHR) => {
-            console.log('INFO => save_config success');
+            console.log('INFO: save_config success');
+            process_startup_data(data);
             if (data.status) {
                 if (data.status === 'ok') {
                     console.log('Successfully saved the config on the server.');
@@ -391,31 +499,31 @@ function save_config(config) {
             }
         })
         .fail((jqXHR, textStatus, errorThrown) => {
-            console.log('ERROR => save_config failed');
+            console.log('ERROR: save_config failed');
             alert('Failed to save the config');
         });
-}
+};
 
 /**
  * Fetches the config from the server.
- * @param {Object} config
+ * @param {string} config_name
  * @returns {Promise} resolves with the config object if successful, otherwise rejects with an error message.
  */
-function read_config(username) {
+const read_config = (config_name) => {
     let p = new Promise((resolve, reject) => {
-        const url = `${api_base_url}/v1/read_config`;
+        const url = `${API_BASE_URL}/v1/read_config`;
 
         const opts = {
             method: 'POST',
             data: {
-                username: username,
+                config_name: config_name,
             },
             dataType: 'json',
         };
 
         $.ajax(url, opts)
             .then((data, textStatus, jqXHR) => {
-                console.log('INFO => (read_config) success');
+                console.log('INFO: (read_config) success');
                 if (data.status) {
                     if (data.status === 'ok' && data.config) {
                         console.log('Successfully read the config from the server.');
@@ -428,49 +536,110 @@ function read_config(username) {
                 }
             })
             .fail((jqXHR, textStatus, errorThrown) => {
-                console.log('ERROR => (read_config) failed');
+                console.log('ERROR: (read_config) failed');
                 reject('Failed to read the config from the server');
             });
     });
 
     return p;
-}
+};
+
+/**
+ * Calls the API to delete a configuration from the database.
+ * @param {string} config_name
+ * @returns
+ */
+const delete_config = (config_name) => {
+    let p = new Promise((resolve, reject) => {
+        const url = `${API_BASE_URL}/v1/delete_config`;
+
+        const opts = {
+            method: 'POST',
+            data: {
+                config_name: config_name,
+            },
+            dataType: 'json',
+        };
+
+        $.ajax(url, opts)
+            .then((data, textStatus, jqXHR) => {
+                console.log('INFO: (delete_config) success');
+                process_startup_data(data);
+                if (data.status) {
+                    if (data.status === 'ok' && data.config) {
+                        console.log('Successfully deleted the config from the server.');
+                        resolve(data.config);
+                    } else {
+                        reject('Failed to read the config');
+                    }
+                } else {
+                    reject('Invalid response from the server');
+                }
+            })
+            .fail((jqXHR, textStatus, errorThrown) => {
+                console.log('ERROR: (delete_config) failed');
+                reject('Failed to delete the config from the server');
+            });
+    });
+
+    return p;
+};
 
 /**
  * Event handler for the setup button. Displays the setup dialog.
  * @param {Event} evt
  */
-function handle_setup(evt) {
+const handle_setup = (evt) => {
     show_setup_dialog();
-}
+};
 
 /**
  * Displays the setup dialog.
  */
-function show_setup_dialog() {
-    ui.form.username.val(config.username);
-    ui.form.client_id.val(config.client_id);
-    ui.form.client_secret.val(config.client_secret);
-
-    $(`input[value=${config.api_server}]`).prop('checked', true);
-
+const show_setup_dialog = () => {
+    populate_setup_dialog();
+    handle_config_item_changed();
     ui.overlay.show();
     ui.dialog.show();
-}
+};
+
+/**
+ * Show the setup dialog and overlay.
+ */
+const hide_setup_dialog = () => {
+    ui.dialog.hide();
+    ui.overlay.hide();
+};
+
+/**
+ * Puts values in all of the edit fields.
+ */
+const populate_setup_dialog = () => {
+    load_config_list_values();
+    ui.form.config_name.val(config.name);
+    ui.form.username.val(config.username);
+    ui.form.server.val(config.server);
+    ui.form.client_id.val(config.client_id);
+    ui.form.client_secret.val(config.client_secret);
+    ui.form.e2e.prop('checked', config.e2e);
+};
 
 /**
  * Read config and code/token data and configure the UI according to what we hve.
  */
-function configure_app() {
+const configure_app = () => {
+    ui.form.config_name.on('keyup change paste', handle_config_item_changed);
+    ui.form.username.on('keyup change paste', handle_config_item_changed);
+    ui.form.server.on('keyup change paste', handle_config_item_changed);
+    ui.form.client_id.on('keyup change paste', handle_config_item_changed);
+    ui.form.client_secret.on('keyup change paste', handle_config_item_changed);
+
     clear_response_area();
+
     get_startup_data()
         .then((data) => {
-            if ('config' in data) {
-                config = data.config;
-            }
-
-            if ('port' in data) {
-                http_port = data.port;
+            if ('config_list' in data) {
+                config_list = data.config_list;
             }
 
             if (config.username && config.client_id && config.client_secret) {
@@ -478,55 +647,118 @@ function configure_app() {
             } else {
                 show_setup_dialog();
             }
-
-            if ('code' in data) {
-                set_response_area(data.code);
-                ui.request_token_button.show();
-            } else if ('token' in data) {
-                set_response_area(data.token);
-                ui.refresh_token_button.show();
-                ui.delete_token_button.show();
-            } else if ('message' in data) {
-                set_response_area(data.message);
-                hide_action_buttons();
-            }
         })
-        .catch((error) => {});
-}
+        .catch((error) => {
+            console.error(`Couldn't fetch startup data: ${error}`);
+        });
+
+    ui.form.add_new_config_button.on('click', handle_new_config_clicked);
+};
 
 /**
  * Fetches startup data from the server and configure the app.
+ * @param {string|null}   config_name if known.
  * @returns {Promise} resolves with startup data, or rejects with error message.
  */
-function get_startup_data() {
-    console.log('INFO => in handle_refresh_button');
+const get_startup_data = (config_name = null) => {
+    console.log('INFO: in handle_refresh_button');
 
     let p = new Promise((resolve, reject) => {
-        const username = localStorage.getItem(username_cookie_name);
-        if (username) {
-            const url = `${api_base_url}/v1/get_startup_data`;
+        config_name = config_name || get_current_config();
+        const url = `${API_BASE_URL}/v1/get_startup_data`;
 
-            const opts = {
-                method: 'POST',
-                data: {
-                    username: username,
-                },
-                dataType: 'json',
-            };
+        const opts = {
+            method: 'POST',
+            data: {},
+            dataType: 'json',
+        };
 
-            $.ajax(url, opts)
-                .then((data, textStatus, jqXHR) => {
-                    console.log('INFO => get_startup_data success');
-                    resolve(data);
-                })
-                .fail((jqXHR, textStatus, errorThrown) => {
-                    console.log('ERROR => get_startup_data failed');
-                    reject('Failed to get startup data');
-                });
-        } else {
-            show_setup_dialog();
+        if (config_name) {
+            opts.data.config_name = config_name;
         }
+
+        $.ajax(url, opts)
+            .then((data, textStatus, jqXHR) => {
+                console.log('INFO: get_startup_data success');
+                process_startup_data(data);
+                resolve(data);
+            })
+            .fail((jqXHR, textStatus, errorThrown) => {
+                console.log('ERROR: get_startup_data failed');
+                reject('Failed to get startup data');
+            });
     });
 
     return p;
-}
+};
+
+/**
+ * Handles storing of data from the server in global vars and setting display elements.
+ * @param {Object} data
+ */
+const process_startup_data = (data) => {
+    if (data) {
+        if (data.config_list) {
+            config_list = data.config_list;
+        } else {
+            config_list = [];
+        }
+
+        if (data.config) {
+            config = data.config;
+            // Check to see if the stored config name still the current config.
+            // If not, update it.
+            const config_name = get_current_config();
+            if (config_name !== config.name) {
+                set_current_config(config.name);
+            }
+            populate_setup_dialog();
+        } else {
+            config = {};
+        }
+
+        if ('port' in data) {
+            http_port = data.port;
+        } else {
+            http_port = DEFAULT_HTTP_PORT;
+        }
+
+        if (data.code) {
+            set_response_area(data.code);
+            ui.request_token_button.show();
+        } else if (data.token) {
+            set_response_area(data.token);
+            ui.refresh_token_button.show();
+            ui.delete_token_button.show();
+        } else if (data.message) {
+            set_response_area(data.message);
+            hide_action_buttons();
+        }
+    }
+};
+
+/**
+ * Read the current config name (from local storage)
+ * @param {string} config_name
+ * @returns {string} The inserted value.
+ */
+const set_current_config = (config_name = '') => {
+    return localStorage.setItem(CONFIG_NAME_KEY_NAME, config_name);
+};
+
+/**
+ * Reads the current config name from local storage.
+ * @returns {string|null}
+ */
+const get_current_config = () => {
+    return localStorage.getItem(CONFIG_NAME_KEY_NAME);
+};
+
+/**
+ * Clear the current config name from local storage.
+ * @returns {boolean}     true if the config name was cleared, false otherwise.
+ */
+const clear_current_config = () => {
+    const ret = set_current_config('');
+    return ret === '';
+};

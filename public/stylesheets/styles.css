@@ -87,7 +87,7 @@ div#form_container {
 }
 
 div.inner-container {
-    width: 480px;
+    width: 475px;
     margin-left: auto;
     margin-right: auto;
     background-color: white;
@@ -99,6 +99,76 @@ div.inner-container {
     font-family: sans-serif;
 }
 
+.config-list-title {
+    margin-left: 10px;
+    display: inline-block;
+    vertical-align: top;
+    font-weight: bold;
+    font-size: 20px;
+    margin-bottom: 10px;
+}
+
+#config_list {
+    min-height: 130px;
+    max-height: 130px;
+    border: 1px solid #dadada;
+    width: 320px;
+    margin-bottom: 30px;
+    margin-left: 10px;
+    border-radius: 4px;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    display: inline-block;
+}
+
+#config_list_button_container {
+    display: inline-block;
+    vertical-align: top;
+    padding-left: 20px;
+    padding-top: 42px;
+}
+
+.config-list-button {
+    cursor: pointer;
+}
+
+.config-list-button .icon {
+    font-size: 35px;
+    margin-left: 11px;
+}
+
+.config-list-button .config-button-title {
+    font-size: 12px;
+}
+
+.config-list-item {
+    padding: 6px 4px;
+    margin-top: 3px;
+    margin-bottom: 3px;
+    font-size: 18px;
+}
+
+.config-list-item .config-list-item-text {
+    display: inline-block;
+    cursor: pointer;
+}
+
+.config-list-item .config-list-item-icon {
+    display: inline-block;
+    float: right;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.config-list-item:nth-child(even) {
+    background-color: #f0f0f0;
+}
+
+.config-list-item.selected {
+    background-color: #74b9ff;
+    color: white;
+}
+
 div.inner-container tr > td {
     padding-bottom: 10px;
 }
@@ -108,7 +178,7 @@ div.inner-container tr > td:first-of-type {
 }
 
 td.label-td div {
-    width: 110px;
+    width: 115px;
 }
 
 div.inner-container input[type='text'],
@@ -119,9 +189,17 @@ div.inner-container input[type='password'] {
     border-radius: 4px;
 }
 
+div.inner-container input[name='config_name_input'],
+div.inner-container input[name='server_input'],
 div.inner-container input[name='client_id_input'],
 div.inner-container input[name='client_secret_input'] {
     width: 290px;
+}
+
+#e2e_checkbox {
+    transform: scale(1.5);
+    margin-left: 3px;
+    cursor: pointer;
 }
 
 div.inner-container div.dialog-title {

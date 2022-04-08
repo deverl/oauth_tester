@@ -2,46 +2,34 @@ const express = require('express');
 const router = express.Router();
 const db = require('../server/db');
 const ts = require('../server/qbt');
+const utils = require('../server/utils');
 const constants = require('../constants/constants');
 
 /**
  * Handler for the get_startup_data end point.
  */
 router.post('/get_startup_data', (req, res, next) => {
-    let code,
-        token,
-        config,
-        username,
-        o = {};
+    let code, token, config_name, o;
 
-    if (req.body.username) {
-        username = req.body.username;
+    if (req.body.config_name) {
+        config_name = req.body.config_name;
+    } else {
+        config_name = null;
+    }
 
-        code = db.read_code(username);
-        token = db.read_token(username);
-        config = db.read_config(username);
+    o = load_startup_data(config_name);
 
-        if (config) {
-            o.config = config;
-        }
-
-        o.port = constants.HTTP_PORT;
-
-        if (code) {
-            o.code = code;
-        } else if (token) {
-            let timestamp = new Date().getTime();
-            if (token.expire_time_ms && token.expire_time_ms > timestamp) {
-                o.token = token;
-            } else {
-                o.message = 'Token is invalid (expired)';
-            }
+    if (!o.code && o.token) {
+        let timestamp = new Date().getTime();
+        if (o.token.expire_time_ms && o.token.expire_time_ms > timestamp) {
+            console.info(`Token for ${config_name} is still good`);
         } else {
-            o.message = 'No token in storage';
+            delete o.token;
+            db.delete_token(config_name);
+            o.message = 'Token is invalid (expired)';
         }
     } else {
-        res.status(400);
-        o.message = 'Invalid request';
+        o.message = 'No token in storage';
     }
 
     res.send(o);
@@ -54,9 +42,18 @@ router.post('/save_config', (req, res, next) => {
     let o,
         body = req.body;
 
-    if (body.username && body.client_id && body.client_secret && body.api_server) {
-        db.save_config(body.username, body.client_id, body.client_secret, body.api_server);
-        o = { status: 'ok' };
+    if (body.name && body.username && body.server && body.client_id && body.client_secret) {
+        if (!'e2e' in body) {
+            body.e2e = 0;
+        }
+        body.id = utils.force_int(body.id);
+        const id = db.save_config(body);
+        if (id) {
+            o = load_startup_data(body.name);
+            o.status = 'ok';
+        } else {
+            o = { status: 'fail', message: 'DB failure' };
+        }
     } else {
         res.status(400);
         o = { status: 'fail', message: 'Invalid request' };
@@ -72,12 +69,38 @@ router.post('/read_config', (req, res, next) => {
     let o,
         body = req.body;
 
-    if (body.username) {
-        const config = db.read_config(body.username);
+    if (body.config_name) {
+        const config = db.read_config(body.config_name);
         if (config) {
-            o = { status: 'ok', config: config };
+            o = load_startup_data(body.name);
+            o.status = 'ok';
         } else {
             o = { status: 'fail', message: 'No config found' };
+        }
+    } else {
+        res.status(400);
+        o = { status: 'fail', message: 'Invalid request' };
+    }
+
+    res.send(o);
+});
+
+router.post('/delete_config', (req, res, next) => {
+    let o,
+        body = req.body;
+
+    if (body.config_name) {
+        const config_name = body.config_name;
+        const config = db.read_config(body.config_name);
+        if (config) {
+            db.delete_code(config_name);
+            db.delete_state(config_name);
+            db.delete_token(config_name);
+            db.delete_config(config_name);
+            o = load_startup_data();
+            o.status = 'ok';
+        } else {
+            o = { status: 'fail', message: `Config '${config_name} not found` };
         }
     } else {
         res.status(400);
@@ -91,14 +114,17 @@ router.post('/read_config', (req, res, next) => {
  * Handler for the delete_token end point.
  */
 router.post('/delete_token', (req, res, next) => {
-    let username,
+    let config_name,
+        body = req.body,
         o = { status: 'fail' };
 
-    if (req.body.username) {
-        username = req.body.username;
+    if (body.config_name) {
+        config_name = body.config_name;
         try {
-            db.delete_token(username);
-            o = { status: 'ok', message: 'No token in storage' };
+            db.delete_token(config_name);
+            o = load_startup_data(config_name);
+            o.status = 'ok';
+            o.message = 'No token in storage';
         } catch (e) {
             o = { status: 'fail' };
         }
@@ -117,9 +143,14 @@ router.post('/save_state_data', (req, res, next) => {
     let o,
         body = req.body;
 
-    if (body.username && body.state) {
-        db.save_state(body.username, body.state);
-        o = { status: 'ok' };
+    if (body.config_name && body.state) {
+        const id = db.save_state(body.config_name, body.state);
+        if (id) {
+            o = load_startup_data(body.config_name);
+            o.status = 'ok';
+        } else {
+            o = { status: 'fail', message: 'DB Failure' };
+        }
     } else {
         res.status(400);
         o = { status: 'fail', message: 'Invalid request' };
@@ -133,11 +164,12 @@ router.post('/save_state_data', (req, res, next) => {
  */
 router.get('/oauth_handler', (req, res, next) => {
     if (req.query.code && req.query.state) {
-        let username = db.get_username_from_state(req.query.state);
-        if (username) {
-            db.store_code(username, req.query.code);
+        const config = db.get_config_from_state(req.query.state);
+        if (config && config.name) {
+            db.delete_state(config.name);
+            db.save_code(config.name, req.query.code);
         } else {
-            console.log(`ERROR => (oauth_handler) no username retrieved for code. query = ${req.query}`);
+            console.log(`ERROR: (oauth_handler) no username retrieved for code. query = ${req.query}`);
         }
     }
 
@@ -151,19 +183,32 @@ router.post('/exchange_code_for_token', (req, res, next) => {
     let o,
         body = req.body;
 
-    if (body.username && body.code) {
-        const username = body.username;
+    if (body.config_name && body.code) {
+        const config_name = body.config_name;
         const code = body.code;
 
-        ts.get_token(username, code)
-            .then(token => {
-                o = { status: 'ok', token: token };
-                res.send(o);
-            })
-            .catch(err => {
-                res.status(400);
-                o = { status: 'fail', message: 'API failure' };
-            });
+        db.delete_code(config_name);
+
+        const config = db.get_config_from_config_name(config_name);
+
+        if (config && config.username) {
+            ts.get_token(config, code)
+                .then((token) => {
+                    o = load_startup_data(config_name);
+                    o.status = 'ok';
+                    res.send(o);
+                })
+                .catch((err) => {
+                    res.status(400);
+                    o = { status: 'fail', message: `API failure: ${err}` };
+                    db.delete_code(config.name);
+                    res.send(o);
+                });
+        } else {
+            res.status(400);
+            o = { status: 'fail', message: 'Invalid request' };
+            res.send(o);
+        }
     } else {
         res.status(400);
         o = { status: 'fail', message: 'Invalid request' };
@@ -178,17 +223,21 @@ router.post('/refresh_token', (req, res, next) => {
     let o,
         body = req.body;
 
-    if (body.username) {
-        const username = body.username;
+    if (body.config_name) {
+        const config_name = body.config_name;
 
-        ts.refresh_token(username)
-            .then(token => {
-                o = { status: 'ok', token: token };
+        const config = db.get_config_from_config_name(config_name);
+
+        ts.refresh_token(config)
+            .then((token) => {
+                o = load_startup_data(config_name);
+                o.status = 'ok';
                 res.send(o);
             })
-            .catch(err => {
+            .catch((err) => {
                 res.status(400);
-                o = { status: 'fail', message: 'API failure' };
+                o = { status: 'fail', message: `API failure: ${err}` };
+                res.send(o);
             });
     } else {
         res.status(400);
@@ -196,5 +245,51 @@ router.post('/refresh_token', (req, res, next) => {
         res.send(o);
     }
 });
+
+/**
+ * Helper to load all of the known configuration data into an object.
+ * @param {string|null} config_name
+ * @returns {Object}
+ */
+const load_startup_data = (config_name = null) => {
+    let data = {};
+
+    const config_list = db.get_config_list();
+
+    if (Array.isArray(config_list) && config_list.length) {
+        data.config_list = config_list;
+    }
+
+    data.port = constants.HTTP_PORT;
+
+    if (!config_name) {
+        const first_config = db.get_first_config();
+        if (first_config && first_config.name) {
+            config_name = first_config.name;
+        }
+    }
+
+    if (config_name) {
+        const code = db.read_code(config_name);
+
+        if (code) {
+            data.code = code;
+        }
+
+        const token = db.read_token(config_name);
+
+        if (token) {
+            data.token = token;
+        }
+
+        const config = db.read_config(config_name);
+
+        if (config) {
+            data.config = config;
+        }
+    }
+
+    return data;
+};
 
 module.exports = router;
