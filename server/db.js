@@ -1,6 +1,6 @@
 // const fs = require('fs');
 const sqlite3 = require('better-sqlite3');
-const db = new sqlite3('oauth_test.db', { verbose: console.log });
+const db = new sqlite3('oauth_test.db');
 
 const utils = require('./utils');
 const constants = require('./constants');
