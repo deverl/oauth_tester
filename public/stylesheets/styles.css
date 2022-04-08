@@ -142,9 +142,7 @@ div.inner-container {
 }
 
 .config-list-item {
-    padding: 6px 4px;
-    margin-top: 3px;
-    margin-bottom: 3px;
+    padding: 9px 4px;
     font-size: 18px;
 }
 
@@ -158,6 +156,10 @@ div.inner-container {
     float: right;
     cursor: pointer;
     font-size: 16px;
+}
+
+.config-list-item .config-list-item-icon i {
+    font-size: 20px;
 }
 
 .config-list-item:nth-child(even) {
