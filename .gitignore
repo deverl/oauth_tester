@@ -6,8 +6,11 @@ yarn-debug.log*
 yarn-error.log*
 
 
+
+
 .DS_Store
 db/
+oauth_test.db
 
 # Runtime data
 pids
