@@ -26,7 +26,7 @@ const get_api_server_base_url = (config) => {
  * @returns {Promise} Resolved with the token, or rejected with an error message.
  */
 const get_token = (config, code) => {
-    console.log(`DEBUG: (get_token): config = ${JSON.stringify(config)}`);
+    console.log(`DEBUG: (get_token): config_name = ${JSON.stringify(config.name)}`);
 
     let p = new Promise((resolve, reject) => {
         if (!config || !config.username || !config.server) {
@@ -48,6 +48,8 @@ const get_token = (config, code) => {
                 redirect_uri: redirect_uri,
             },
         };
+
+        console.log(`DEBUG: (get_token) Posting request to '${opts.url}'`);
 
         request.post(opts, (err, httpResponse, body) => {
             console.log(
@@ -121,6 +123,8 @@ const refresh_token = (config) => {
             console.log(`DEBUG: (do_refresh_token, before post): opts = ${JSON.stringify(opts)}.`);
 
             const d1 = new Date();
+
+            console.log(`DEBUG: (do_refresh_token): Posting request to '${opts.url}'`);
 
             request.post(opts, (err, httpResponse, body) => {
                 const d2 = new Date();
