@@ -7,6 +7,7 @@
 const app = require('../app');
 const debug = require('debug')('oauth-test:server');
 const http = require('http');
+const utils = require('../server/utils');
 const constants = require('../constants/constants');
 
 /**
@@ -63,7 +64,7 @@ const onListening = () => {
     const addr = server.address();
     const bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port;
     debug('Listening on ' + bind);
-    console.log(`Server is listening on port ${bind}`);
+    utils.infoMsg(`Server is listening on port ${bind}`);
 };
 
 /**
