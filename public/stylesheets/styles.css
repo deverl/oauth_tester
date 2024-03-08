@@ -99,7 +99,7 @@ div#form_container {
 }
 
 div.inner-container {
-    width: 475px;
+    width: 585px;
     margin-left: auto;
     margin-right: auto;
     background-color: white;
@@ -124,7 +124,7 @@ div.inner-container {
     min-height: 130px;
     max-height: 130px;
     border: 1px solid #dadada;
-    width: 320px;
+    width: 430px;
     margin-bottom: 30px;
     margin-left: 10px;
     border-radius: 4px;
@@ -204,16 +204,10 @@ div.inner-container input[type='password'] {
 }
 
 div.inner-container input[name='config_name_input'],
-div.inner-container input[name='server_input'],
+div.inner-container input[name='base_url_input'],
 div.inner-container input[name='client_id_input'],
 div.inner-container input[name='client_secret_input'] {
-    width: 290px;
-}
-
-#e2e_checkbox {
-    transform: scale(1.5);
-    margin-left: 3px;
-    cursor: pointer;
+    width: 405px;
 }
 
 div.inner-container div.dialog-title {

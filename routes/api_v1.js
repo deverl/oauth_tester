@@ -42,9 +42,9 @@ router.post('/save_config', (req, res, next) => {
     let o,
         body = req.body;
 
-    if (body.name && body.username && body.server && body.client_id && body.client_secret) {
-        if (!'e2e' in body) {
-            body.e2e = 0;
+    if (body.name && body.base_url && body.client_id && body.client_secret) {
+        if (!body.base_url.startsWith("http://") && !body.base_url.startsWith("https://")) {
+            body.base_url = "https://" + body.base_url;
         }
         body.id = utils.force_int(body.id);
         const id = db.save_config(body);
@@ -72,7 +72,7 @@ router.post('/read_config', (req, res, next) => {
     if (body.config_name) {
         const config = db.read_config(body.config_name);
         if (config) {
-            o = load_startup_data(body.name);
+            o = load_startup_data(body.config_name);
             o.status = 'ok';
         } else {
             o = { status: 'fail', message: 'No config found' };
@@ -169,7 +169,7 @@ router.get('/oauth_handler', (req, res, next) => {
             db.delete_state(config.name);
             db.save_code(config.name, req.query.code);
         } else {
-            console.log(`ERROR: (oauth_handler) no username retrieved for code. query = ${req.query}`);
+            console.log(`ERROR: (oauth_handler) no config retrieved for code. query = ${req.query}`);
         }
     }
 
@@ -191,7 +191,7 @@ router.post('/exchange_code_for_token', (req, res, next) => {
 
         const config = db.get_config_from_config_name(config_name);
 
-        if (config && config.username) {
+        if (config) {
             ts.get_token(config, code)
                 .then((token) => {
                     o = load_startup_data(config_name);

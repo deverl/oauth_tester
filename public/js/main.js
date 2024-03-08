@@ -3,10 +3,9 @@ const util = Utility();
 const CONFIG_NAME_KEY_NAME = 'config_name';
 const API_BASE_URL = '/api';
 const DEFAULT_HTTP_PORT = 4000;
-const EMPTY_CONFIG = { name: '', username: '', server: '', client_id: '', client_secret: '', e2e: false };
-const E2E_SUFFIX = '-e2e';
+const EMPTY_CONFIG = { name: '', base_url: '', client_id: '', client_secret: '' };
 
-let http_port = DEFAULT_HTTP_PORT;
+let http_port = DEFAULT_HTTP_PORT; 
 
 let config = EMPTY_CONFIG;
 
@@ -40,11 +39,9 @@ $(document).ready(() => {
     ui.form.config_list = $('#config_list');
     ui.form.add_new_config_button = $('#add_new_config');
     ui.form.config_name = $('#config_name_input');
-    ui.form.username = $('#username_input');
-    ui.form.server = $('#server_input');
+    ui.form.base_url = $('#base_url_input');
     ui.form.client_id = $('#client_id_input');
     ui.form.client_secret = $('#client_secret_input');
-    ui.form.e2e = $('#e2e_checkbox');
     ui.form.submit_button = $('#form_submit_button');
 
     ui.form.submit_button.prop('disabled', true);
@@ -75,18 +72,16 @@ $(document).ready(() => {
  */
 const handle_config_item_changed = (evt) => {
     const name = ui.form.config_name.val();
-    const username = ui.form.username.val();
-    const server = ui.form.server.val();
+    const base_url = ui.form.base_url.val();
     const client_id = ui.form.client_id.val();
     const client_secret = ui.form.client_secret.val();
 
     console.info(`INFO: (handle_config_item_changed) name = ${name}`);
-    console.info(`INFO: (handle_config_item_changed) username = ${username}`);
-    console.info(`INFO: (handle_config_item_changed) server = ${server}`);
+    console.info(`INFO: (handle_config_item_changed) base_url = ${base_url}`);
     console.info(`INFO: (handle_config_item_changed) client_id = ${client_id}`);
     console.info(`INFO: (handle_config_item_changed) client_secret = ${client_secret}`);
 
-    if (name && username && server && client_id && client_secret) {
+    if (name && base_url && client_id && client_secret) {
         ui.form.submit_button.prop('disabled', false);
     } else {
         ui.form.submit_button.prop('disabled', true);
@@ -142,19 +137,11 @@ const clear_response_area = () => {
 
 /**
  * Utility function to create the API url to be used with TSheets for
- * the current username and server name.
+ * the current configuration.
  * @returns {string} The base API URL to use with TSheets.
  */
 const get_base_api_url = () => {
-    let server_type;
-
-    if (config.e2e) {
-        server_type = E2E_SUFFIX;
-    } else {
-        server_type = '';
-    }
-
-    const url = `https://${config.username}.tsheets${server_type}.intuit.com/api`;
+    const url = `${config.base_url}/api`;
 
     console.info(`DEBUG: (get_base_api_url) base_api_url = ${url}`);
 
@@ -335,13 +322,11 @@ const handle_request_token = (evt) => {
  */
 const handle_form_submit = (evt) => {
     config.name = ui.form.config_name.val();
-    config.username = ui.form.username.val();
-    config.server = ui.form.server.val();
+    config.base_url = ui.form.base_url.val();
     config.client_id = ui.form.client_id.val();
     config.client_secret = ui.form.client_secret.val();
-    config.e2e = ui.form.e2e.is(':checked');
     console.log('INFO handle_form_submit, config: ', config);
-    if (config.name && config.username && config.server && config.client_id && config.client_secret) {
+    if (config.name && config.base_url && config.client_id && config.client_secret) {
         hide_setup_dialog();
         save_config(config);
         ui.login_button.show();
@@ -357,20 +342,18 @@ const handle_form_submit = (evt) => {
  */
 const load_config = () => {
     let p = new Promise((resolve, reject) => {
-        const username = get_current_config();
+        const config_name = get_current_config();
 
-        read_config(username)
+        read_config(config_name)
             .then((cfg) => {
                 config = cfg;
                 // Load config_list values.
                 load_config_list_values();
                 // Load form values.
                 ui.form.config_name.val(config.name);
-                ui.form.username.val(config.username);
-                ui.form.server.val(config.server);
+                ui.form.base_url.val(config.base_url);
                 ui.form.client_id.val(config.client_id);
                 ui.form.client_secret.val(config.client_secret);
-                ui.form.e2e.prop('checked', config.e2e);
                 resolve();
             })
             .catch((error) => {
@@ -470,12 +453,10 @@ const save_config = (config) => {
         data: {
             id: config.id,
             name: config.name,
-            username: config.username,
-            server: config.server,
+            base_url: config.base_url,
             client_id: config.client_id,
             client_secret: config.client_secret,
-            api_server: config.api_server,
-            e2e: config.e2e ? 1 : 0,
+            api_server: config.api_server
         },
         dataType: 'json',
     };
@@ -615,11 +596,9 @@ const populate_setup_dialog = () => {
     ui.config_name.text(config_name);
     load_config_list_values();
     ui.form.config_name.val(config.name);
-    ui.form.username.val(config.username);
-    ui.form.server.val(config.server);
+    ui.form.base_url.val(config.base_url);
     ui.form.client_id.val(config.client_id);
     ui.form.client_secret.val(config.client_secret);
-    ui.form.e2e.prop('checked', config.e2e);
 };
 
 /**
@@ -627,8 +606,7 @@ const populate_setup_dialog = () => {
  */
 const configure_app = () => {
     ui.form.config_name.on('keyup change paste', handle_config_item_changed);
-    ui.form.username.on('keyup change paste', handle_config_item_changed);
-    ui.form.server.on('keyup change paste', handle_config_item_changed);
+    ui.form.base_url.on('keyup change paste', handle_config_item_changed);
     ui.form.client_id.on('keyup change paste', handle_config_item_changed);
     ui.form.client_secret.on('keyup change paste', handle_config_item_changed);
 
@@ -640,7 +618,7 @@ const configure_app = () => {
                 config_list = data.config_list;
             }
 
-            if (config.username && config.client_id && config.client_secret) {
+            if (config.base_url && config.client_id && config.client_secret) {
                 ui.login_button.show();
             } else {
                 show_setup_dialog();

@@ -13,11 +13,9 @@ const init = () => {
             `CREATE TABLE IF NOT EXISTS
              config(id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL UNIQUE,
-                    username TEXT NOT NULL,
-                    server TEXT NOT NULL,
+                    base_url TEXT NOT NULL,
                     client_id TEXT NOT NULL,
-                    client_secret TEXT NOT NULL,
-                    e2e INTEGER CHECK (e2e IN (0, 1)) NOT NULL
+                    client_secret TEXT NOT NULL
             )`
         );
         createConfigTable.run();
@@ -25,11 +23,9 @@ const init = () => {
         const createConfigTableConfigNameIndex = db.prepare(`CREATE INDEX IF NOT EXISTS config_name_idx ON config (name)`);
         createConfigTableConfigNameIndex.run();
 
-        const createConfigTableUsernameIndex = db.prepare(`CREATE INDEX IF NOT EXISTS config_username_idx ON config (username)`);
-        createConfigTableUsernameIndex.run();
 
-        const createConfigTableServerIndex = db.prepare(`CREATE INDEX IF NOT EXISTS config_server_idx ON config (server)`);
-        createConfigTableServerIndex.run();
+        const createConfigTableUrlIndex = db.prepare(`CREATE INDEX IF NOT EXISTS config_server_idx ON config (base_url)`);
+        createConfigTableUrlIndex.run();
 
         const createPropsTable = db.prepare(
             `CREATE TABLE IF NOT EXISTS
@@ -112,7 +108,7 @@ const save_code = (config_name, code) => {
 };
 
 /**
- * Retrieves the code that was last stored for the given username, then deletes the code.
+ * Retrieves the code that was last stored for the given configuration, then deletes the code.
  * @param {string} config_name
  * @returns {string|null} the code that was previously stored for the given configuration
  */
@@ -126,7 +122,7 @@ const read_code = (config_name) => {
 };
 
 /**
- * Utility function to delete the code file associated with the given username.
+ * Utility function to delete the code file associated with the given configuration.
  * @param {string} config_name
  * @returns {boolean}
  */
@@ -170,7 +166,7 @@ const save_token = (config_name, token) => {
 };
 
 /**
- * Retrieves the token (with associated meta data) for the given username
+ * Retrieves the token (with associated meta data) for the given configuration
  * @param {string} config_name
  * @returns {object} token, including meta data
  */
@@ -296,7 +292,7 @@ const save_prop_by_config_id = (config_id, type, value) => {
 };
 
 /**
- * Saves the state value associated iwth the given username.
+ * Saves the state value associated iwth the given configuration.
  * Later, when TSheets redirects to our redirect_uri, we will use the
  * state value that they return to use to lookup the user.
  * @param {string} config_name Name of the associated config
@@ -318,7 +314,7 @@ const delete_state = (config_name) => {
 };
 
 /**
- * Looks up the config (including username) associated with the specified props value value.
+ * Looks up the config associated with the specified props value value.
  * @param {string} state
  * @returns {Object|null} config associated with the given props value, or null if not found.
  */
@@ -348,7 +344,7 @@ const get_config_from_prop_value = (type, value) => {
 };
 
 /**
- * Looks up the config (including username) associated with the specified state value, then deletes the state file.
+ * Looks up the config associated with the specified state value, then deletes the state file.
  * @param {string} state
  * @returns {Object|null} config associated with the given state value, or null if not found.
  */
@@ -374,17 +370,16 @@ const delete_all_state = () => {
 /**
  * Low level function to store a config in the DB.
  * @param {string} config_name
- * @param {string} username
- * @param {string} server
+ * @param {string} base_url
  * @param {string} client_id
  * @param {string} client_secret
- * @param {integer} e2e
- * @returns {integer|null}    record id if successful, null if not.
+ * @param {string} id
+ * @returns {integer|null}   record id if successful, null if not.
  */
-const internal_save_config = (config_name, username, server, client_id, client_secret, e2e = 0, id = null) => {
+const internal_save_config = (config_name, base_url, client_id, client_secret, id = null) => {
     let result = null;
-    e2e = utils.sanitize_TF(e2e) ? 1 : 0; // Force e2e to be an int.
-    if (config_name && username && server && client_id && client_secret) {
+    if (config_name && base_url && client_id && client_secret) {
+        let config = read_config(config_name)
         try {
             let info;
             if (typeof id === 'string') {
@@ -392,16 +387,24 @@ const internal_save_config = (config_name, username, server, client_id, client_s
                 id = utils.force_int(id);
             }
             if (id !== null && id !== 0) {
-                info = internal_update_config(id, config_name, username, server, client_id, client_secret, e2e);
+                info = internal_update_config(id, config_name, base_url, client_id, client_secret);
 
                 if (info.changes) {
                     result = id;
                 }
-            } else {
+            }
+            else if (config && config.id) {
+                info = internal_update_config(config.id, config_name, base_url, client_id, client_secret);
+
+                if (info.changes) {
+                    result = config.id;
+                }
+            } 
+            else {
                 q = db.prepare(
-                    `INSERT INTO config (name, username, server, client_id, client_secret, e2e) VALUES (?, ?, ?, ?, ?, ?)`
+                    `INSERT INTO config (name, base_url, client_id, client_secret) VALUES (?, ?, ?, ?)`
                 );
-                info = q.run(config_name, username, server, client_id, client_secret, e2e);
+                info = q.run(config_name, base_url, client_id, client_secret);
 
                 if (info.changes && info.lastInsertRowid) {
                     result = info.lastInsertRowid;
@@ -421,16 +424,13 @@ const internal_save_config = (config_name, username, server, client_id, client_s
  * @param {Object} config
  */
 const save_config = (config) => {
-    if (config.name && config.username && config.server && config.client_id && config.client_secret && 'e2e' in config) {
+    if (config.name && config.base_url && config.client_id && config.client_secret) {
         const id = config.id ? config.id : null;
         return internal_save_config(
             config.name,
-            config.username,
-            config.server,
+            config.base_url,
             config.client_id,
-            config.client_secret,
-            config.e2e,
-            config.id
+            config.client_secret
         );
     }
 };
@@ -439,19 +439,17 @@ const save_config = (config) => {
  * Update a config record by id
  * @param {integer} id
  * @param {string} config_name
- * @param {string} username
- * @param {string} server
+ * @param {string} base_url
  * @param {string} client_id
  * @param {string} client_secret
- * @param {integer} e2e
  * @returns {Object}                better-sqlite3 Info object
  */
-const internal_update_config = (id, config_name, username, server, client_id, client_secret, e2e) => {
+const internal_update_config = (id, config_name, base_url, client_id, client_secret) => {
     try {
         const q = db.prepare(
-            `UPDATE config SET name = ?, username = ?, server = ?, client_id = ?, client_secret = ?, e2e = ? WHERE id = ?`
+            `UPDATE config SET name = ?, base_url = ?, client_id = ?, client_secret = ? WHERE id = ?`
         );
-        const info = q.run(config_name, username, server, client_id, client_secret, e2e, id);
+        const info = q.run(config_name, base_url, client_id, client_secret, id);
         console.log('info = ' + JSON.stringify(info));
         return info;
     } catch (e) {

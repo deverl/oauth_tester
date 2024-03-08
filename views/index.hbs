@@ -64,27 +64,15 @@
                         <input type='text' id='config_name_input' name='config_name_input' placeholder='configuration name' />
                     </td>
                 </tr>
-                <!-- Username Input -->
+                <!-- base_url Input -->
                 <tr>
                     <td class='label-td'>
                         <div>
-                            <label for='username_input'>Username:</label>
+                            <label for='base_url_input'>Base URL:</label>
                         </div>
                     </td>
                     <td>
-                        <input type='text' id='username_input' name='username_input' placeholder='username (client url)' />
-                        <span>&nbsp;&nbsp;<i>(client url)</i></span>
-                    </td>
-                </tr>
-                <!-- Server Input -->
-                <tr>
-                    <td class='label-td'>
-                        <div>
-                            <label for='server_input'>Server:</label>
-                        </div>
-                    </td>
-                    <td>
-                        <input type='text' id='server_input' name='server_input' placeholder='server name' />
+                        <input type='text' id='base_url_input' name='base_url_input' placeholder='https://yourhost.com' />
                     </td>
                 </tr>
                 <!-- Client ID Input -->
@@ -95,7 +83,7 @@
                         </div>
                     </td>
                     <td>
-                        <input type='password' id='client_id_input' name='client_id_input' placeholder='client id' />
+                        <input type='text' id='client_id_input' name='client_id_input' placeholder='client id' />
                     </td>
                 </tr>
                 <!-- Client Secret Input -->
@@ -106,26 +94,12 @@
                         </div>
                     </td>
                     <td>
-                        <input type='password' id='client_secret_input' name='client_secret_input' placeholder='client secret' />
-                    </td>
-                </tr>
-                <!-- e2e Checkbox -->
-                <tr>
-                    <td class='label-td'>
-                        <div>
-                            <span for='e2e_checkbox'>e2e:</span>
-                        </div>
-                    </td>
-                    <td>
-                        <input id='e2e_checkbox' type='checkbox' name='e2e' />
+                        <input type='text' id='client_secret_input' name='client_secret_input' placeholder='client secret' />
                     </td>
                 </tr>
             </table>
 
             <div class='button-row'>
-                <!--
-                <button id="form_cancel_button">Cancel</button>
-                -->
                 <input type='submit' id='form_submit_button' value='OK' class='ui primary button' />
             </div>
         </div>

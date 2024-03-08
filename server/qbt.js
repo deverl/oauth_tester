@@ -4,17 +4,12 @@ const constants = require('../constants/constants');
 
 /**
  * Utility function to create the API url to be used with TSheets for
- * the given username and server name.
+ * the given configuration.
  * @param {Object} config
  * @returns {string} The base API URL to use with TSheets.
  */
 const get_api_server_base_url = (config) => {
-    let server_ext = '';
-    if (config.e2e) {
-        server_ext = '-e2e';
-    }
-
-    const url = `https://${config.username}.tsheets${server_ext}.intuit.com/api`;
+    const url = `${config.base_url}/api`;
 
     return url;
 };
@@ -29,7 +24,7 @@ const get_token = (config, code) => {
     console.log(`DEBUG: (get_token): config_name = ${JSON.stringify(config.name)}`);
 
     let p = new Promise((resolve, reject) => {
-        if (!config || !config.username || !config.server) {
+        if (!config || !config.base_url) {
             reject('Invalid config!');
             return;
         }
