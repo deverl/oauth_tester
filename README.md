@@ -8,7 +8,7 @@ This is a simple node app that provides a means of testing the QuickBooks Time O
 
 ### In the QuickBooks Time App
 
--   Create a new API app (amorweb-prd or armorweb01)
+-   Create a new API app (e2e or prod)
 -   Set the redirect_uri to [http://localhost:4000/api/v1/oauth_handler/](http://localhost:4000/api/v1/oauth_handler/)
 -   Note the client_id and client_secret (you will enter them in the oauth_test app later)
 
@@ -22,7 +22,7 @@ This is a simple node app that provides a means of testing the QuickBooks Time O
 ### Browser
 
 -   Browse to [http://localhost:4000](http://localhost:4000)
--   Enter your username (url), client_id and client_secret (from the API app)
+-   Enter a name for the configuration, base_url, client_id and client_secret (from the API app)
 -   You can then begin to use the oauth_test application
 
 ### Development Environment
@@ -41,7 +41,7 @@ The first time you open the app, you will be presented with a screen asking you 
 
 The dialog will look something like this:
 
-<img src="https://github.intuit.com/dstokes1/oauth_test/blob/master/docs/images/setup-dialog.png" width="500">
+<img src="https://github.com/deverl/oauth_test/blob/master/docs/images/setup-dialog.png" width="500">
 
 Enter all of these values and press the **OK** button to continue.
 
