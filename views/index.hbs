@@ -1,6 +1,6 @@
 <header>
     <div class='image-block'>
-        <img src='/images/qb.svg' alt='logo' />
+        <img src='/images/logo.svg' alt='logo' />
     </div>
     <div id='setup_button'>
         <img src='/images/settings.svg' alt='settings' />
@@ -14,7 +14,7 @@
 </header>
 
 <div>
-    <div class='button' id='login_to_tsheets' style='display:none;'>
+    <div class='button' id='login_button' style='display:none;'>
         Login
     </div>
     <div class='button' id='request_token' style='display: none;'>
@@ -36,7 +36,7 @@
     <form name='oauth_config_form' id='oauth_config_form'>
         <div class='inner-container'>
             <!-- Title -->
-            <div class='dialog-title'>API Server Configuration</div>
+            <div class='dialog-title'>OAuth Server Configuration</div>
             <div class='dialog-close-x'>
                 <img src='/images/baseline-close-24px.svg' alt='close' />
             </div>
@@ -64,15 +64,26 @@
                         <input type='text' id='config_name_input' name='config_name_input' placeholder='configuration name' />
                     </td>
                 </tr>
-                <!-- base_url Input -->
+                <!-- authorize_url Input -->
                 <tr>
                     <td class='label-td'>
                         <div>
-                            <label for='base_url_input'>Base URL:</label>
+                            <label for='authorize_url_input'>Authorize URL:</label>
                         </div>
                     </td>
                     <td>
-                        <input type='text' id='base_url_input' name='base_url_input' placeholder='https://yourhost.com' />
+                        <input type='text' id='authorize_url_input' name='authorize_url_input' placeholder='https://yourhost.com/authorize' />
+                    </td>
+                </tr>
+                <!-- token_url Input -->
+                <tr>
+                    <td class='label-td'>
+                        <div>
+                            <label for='token_url_input'>Token URL:</label>
+                        </div>
+                    </td>
+                    <td>
+                        <input type='text' id='token_url_input' name='token_url_input' placeholder='https://yourhost.com/token' />
                     </td>
                 </tr>
                 <!-- Client ID Input -->
@@ -95,6 +106,17 @@
                     </td>
                     <td>
                         <input type='text' id='client_secret_input' name='client_secret_input' placeholder='client secret' />
+                    </td>
+                </tr>
+                <!-- Scope Input -->
+                <tr>
+                    <td class='label-td'>
+                        <div>
+                            <label for='scope_input'>Scope (optional):</label>
+                        </div>
+                    </td>
+                    <td>
+                        <input type='text' id='scope_input' name='scope_input' placeholder='space-separated scopes' />
                     </td>
                 </tr>
             </table>

@@ -1,7 +1,8 @@
+const crypto = require('crypto');
 const express = require('express');
 const router = express.Router();
 const db = require('../server/db');
-const ts = require('../server/qbt');
+const oauth = require('../server/oauth');
 const utils = require('../server/utils');
 const constants = require('../constants/constants');
 
@@ -9,7 +10,7 @@ const constants = require('../constants/constants');
  * Handler for the get_startup_data end point.
  */
 router.post('/get_startup_data', (req, res, next) => {
-    let code, token, config_name, o;
+    let config_name, o;
 
     if (req.body.config_name) {
         config_name = req.body.config_name;
@@ -36,16 +37,27 @@ router.post('/get_startup_data', (req, res, next) => {
 });
 
 /**
+ * Ensures a URL has a scheme, defaulting to https.
+ * @param {string} url
+ * @returns {string}
+ */
+const ensure_scheme = (url) => {
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        return 'https://' + url;
+    }
+    return url;
+};
+
+/**
  * Handler for the save_config end point.
  */
 router.post('/save_config', (req, res, next) => {
     let o,
         body = req.body;
 
-    if (body.name && body.base_url && body.client_id && body.client_secret) {
-        if (!body.base_url.startsWith("http://") && !body.base_url.startsWith("https://")) {
-            body.base_url = "https://" + body.base_url;
-        }
+    if (body.name && body.authorize_url && body.token_url && body.client_id && body.client_secret) {
+        body.authorize_url = ensure_scheme(body.authorize_url);
+        body.token_url = ensure_scheme(body.token_url);
         body.id = utils.force_int(body.id);
         const id = db.save_config(body);
         if (id) {
@@ -95,6 +107,7 @@ router.post('/delete_config', (req, res, next) => {
         if (config) {
             db.delete_code(config_name);
             db.delete_state(config_name);
+            db.delete_verifier(config_name);
             db.delete_token(config_name);
             db.delete_config(config_name);
             o = load_startup_data();
@@ -137,17 +150,35 @@ router.post('/delete_token', (req, res, next) => {
 });
 
 /**
- * Handler for the save_state_data end point.
+ * Handler for the begin_authorization end point.
+ *
+ * Generates and stores the transient values needed to start an authorization
+ * code flow for the given configuration:
+ * - a cryptographically random `state` (CSRF protection, RFC 6749 section 10.12)
+ * - a PKCE code verifier / S256 code challenge pair (RFC 7636)
+ *
+ * Responds with the state and code challenge so the browser can build the
+ * authorization request.
  */
-router.post('/save_state_data', (req, res, next) => {
+router.post('/begin_authorization', (req, res, next) => {
     let o,
         body = req.body;
 
-    if (body.config_name && body.state) {
-        const id = db.save_state(body.config_name, body.state);
-        if (id) {
+    if (body.config_name) {
+        const state = crypto.randomBytes(24).toString('base64url');
+        const verifier = crypto.randomBytes(32).toString('base64url');
+        const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+
+        const state_id = db.save_state(body.config_name, state);
+        const verifier_id = db.save_verifier(body.config_name, verifier);
+
+        if (state_id && verifier_id) {
             o = load_startup_data(body.config_name);
             o.status = 'ok';
+            o.state = state;
+            o.code_challenge = challenge;
+            o.code_challenge_method = 'S256';
+            o.redirect_uri = oauth.REDIRECT_URI;
         } else {
             o = { status: 'fail', message: 'DB Failure' };
         }
@@ -160,16 +191,28 @@ router.post('/save_state_data', (req, res, next) => {
 });
 
 /**
- * Handler for the oauth_handler end point.
+ * Handler for the oauth_handler end point (the OAuth redirect_uri).
+ * Receives either an authorization code or an error from the authorization
+ * server (RFC 6749 section 4.1.2).
  */
 router.get('/oauth_handler', (req, res, next) => {
+    if (req.query.error) {
+        const description = req.query.error_description ? `: ${req.query.error_description}` : '';
+        const message = `${req.query.error}${description}`;
+        console.error(`ERROR: (oauth_handler) Authorization server returned an error. ${message}`);
+        res.redirect(`/?error=${encodeURIComponent(message)}`);
+        return;
+    }
+
     if (req.query.code && req.query.state) {
         const config = db.get_config_from_state(req.query.state);
         if (config && config.name) {
             db.delete_state(config.name);
             db.save_code(config.name, req.query.code);
         } else {
-            console.log(`ERROR: (oauth_handler) no config retrieved for code. query = ${req.query}`);
+            console.error(`ERROR: (oauth_handler) No config matches the returned state. query = ${JSON.stringify(req.query)}`);
+            res.redirect(`/?error=${encodeURIComponent('Returned state does not match any pending authorization')}`);
+            return;
         }
     }
 
@@ -192,7 +235,8 @@ router.post('/exchange_code_for_token', (req, res, next) => {
         const config = db.get_config_from_config_name(config_name);
 
         if (config) {
-            ts.get_token(config, code)
+            oauth
+                .get_token(config, code)
                 .then((token) => {
                     o = load_startup_data(config_name);
                     o.status = 'ok';
@@ -228,7 +272,8 @@ router.post('/refresh_token', (req, res, next) => {
 
         const config = db.get_config_from_config_name(config_name);
 
-        ts.refresh_token(config)
+        oauth
+            .refresh_token(config)
             .then((token) => {
                 o = load_startup_data(config_name);
                 o.status = 'ok';

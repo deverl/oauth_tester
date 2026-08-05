@@ -204,9 +204,11 @@ div.inner-container input[type='password'] {
 }
 
 div.inner-container input[name='config_name_input'],
-div.inner-container input[name='base_url_input'],
+div.inner-container input[name='authorize_url_input'],
+div.inner-container input[name='token_url_input'],
 div.inner-container input[name='client_id_input'],
-div.inner-container input[name='client_secret_input'] {
+div.inner-container input[name='client_secret_input'],
+div.inner-container input[name='scope_input'] {
     width: 405px;
 }
 

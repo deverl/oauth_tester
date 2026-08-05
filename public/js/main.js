@@ -1,11 +1,9 @@
-const util = Utility();
-
 const CONFIG_NAME_KEY_NAME = 'config_name';
 const API_BASE_URL = '/api';
 const DEFAULT_HTTP_PORT = 4000;
-const EMPTY_CONFIG = { name: '', base_url: '', client_id: '', client_secret: '' };
+const EMPTY_CONFIG = { name: '', authorize_url: '', token_url: '', client_id: '', client_secret: '', scope: '' };
 
-let http_port = DEFAULT_HTTP_PORT; 
+let http_port = DEFAULT_HTTP_PORT;
 
 let config = EMPTY_CONFIG;
 
@@ -22,7 +20,7 @@ let ui = {
 };
 
 $(document).ready(() => {
-    ui.login_button = $('#login_to_tsheets');
+    ui.login_button = $('#login_button');
     ui.config_name = $('#config_name_header');
     ui.response_area = $('#response_body');
     ui.refresh_token_button = $('#refresh_token_button');
@@ -39,9 +37,11 @@ $(document).ready(() => {
     ui.form.config_list = $('#config_list');
     ui.form.add_new_config_button = $('#add_new_config');
     ui.form.config_name = $('#config_name_input');
-    ui.form.base_url = $('#base_url_input');
+    ui.form.authorize_url = $('#authorize_url_input');
+    ui.form.token_url = $('#token_url_input');
     ui.form.client_id = $('#client_id_input');
     ui.form.client_secret = $('#client_secret_input');
+    ui.form.scope = $('#scope_input');
     ui.form.submit_button = $('#form_submit_button');
 
     ui.form.submit_button.prop('disabled', true);
@@ -68,24 +68,40 @@ $(document).ready(() => {
 });
 
 /**
- * Checks to see if we have values for all fields, and enable the submit button if so.
+ * Returns true if all required config fields are present.
+ * @param {Object} cfg
+ * @returns {boolean}
+ */
+const is_config_complete = (cfg) => {
+    return !!(cfg && cfg.name && cfg.authorize_url && cfg.token_url && cfg.client_id && cfg.client_secret);
+};
+
+/**
+ * Checks to see if we have values for all required fields, and enables the submit button if so.
  */
 const handle_config_item_changed = (evt) => {
-    const name = ui.form.config_name.val();
-    const base_url = ui.form.base_url.val();
-    const client_id = ui.form.client_id.val();
-    const client_secret = ui.form.client_secret.val();
+    const form_config = read_form_values();
 
-    console.info(`INFO: (handle_config_item_changed) name = ${name}`);
-    console.info(`INFO: (handle_config_item_changed) base_url = ${base_url}`);
-    console.info(`INFO: (handle_config_item_changed) client_id = ${client_id}`);
-    console.info(`INFO: (handle_config_item_changed) client_secret = ${client_secret}`);
-
-    if (name && base_url && client_id && client_secret) {
+    if (is_config_complete(form_config)) {
         ui.form.submit_button.prop('disabled', false);
     } else {
         ui.form.submit_button.prop('disabled', true);
     }
+};
+
+/**
+ * Reads the current form values into a config object.
+ * @returns {Object}
+ */
+const read_form_values = () => {
+    return {
+        name: ui.form.config_name.val(),
+        authorize_url: ui.form.authorize_url.val(),
+        token_url: ui.form.token_url.val(),
+        client_id: ui.form.client_id.val(),
+        client_secret: ui.form.client_secret.val(),
+        scope: ui.form.scope.val(),
+    };
 };
 
 /**
@@ -136,20 +152,9 @@ const clear_response_area = () => {
 };
 
 /**
- * Utility function to create the API url to be used with TSheets for
- * the current configuration.
- * @returns {string} The base API URL to use with TSheets.
- */
-const get_base_api_url = () => {
-    const url = `${config.base_url}/api`;
-
-    console.info(`DEBUG: (get_base_api_url) base_api_url = ${url}`);
-
-    return url;
-};
-
-/**
- * Handler for the login button.
+ * Handler for the login button. Asks the server to begin an authorization flow
+ * (which generates the state and PKCE values), then redirects the browser to
+ * the configured authorization endpoint.
  * @param {Event} evt
  */
 const handle_login_button = (evt) => {
@@ -158,15 +163,12 @@ const handle_login_button = (evt) => {
     clear_response_area();
     show_busy();
 
-    const state = util.create_state();
-
-    const url = `${API_BASE_URL}/v1/save_state_data`;
+    const url = `${API_BASE_URL}/v1/begin_authorization`;
 
     const opts = {
         method: 'POST',
         data: {
             config_name: config.name,
-            state: state,
         },
         dataType: 'json',
     };
@@ -174,23 +176,29 @@ const handle_login_button = (evt) => {
     $.ajax(url, opts)
         .then((data, textStatus, jqXHR) => {
             ui.busy_overlay.hide();
-            console.log(`INFO: save_state_data success. data: `, data);
-            const base_api_url = get_base_api_url();
+            console.log(`INFO: begin_authorization success. data: `, data);
             if ('status' in data && data.status === 'ok') {
-                const redirect_uri = `http://localhost:${http_port}/api/v1/oauth_handler/`;
-                const query_string = `client_id=${config.client_id}&state=${state}&redirect_uri=${redirect_uri}`;
-                const url = `${base_api_url}/v1/authorize?response_type=code&${query_string}`;
-                console.log(`DEBUG: redirect url: ${url}`);
-                window.location.assign(url);
+                const authorize_url = new URL(config.authorize_url);
+                authorize_url.searchParams.set('response_type', 'code');
+                authorize_url.searchParams.set('client_id', config.client_id);
+                authorize_url.searchParams.set('redirect_uri', data.redirect_uri);
+                authorize_url.searchParams.set('state', data.state);
+                authorize_url.searchParams.set('code_challenge', data.code_challenge);
+                authorize_url.searchParams.set('code_challenge_method', data.code_challenge_method);
+                if (config.scope) {
+                    authorize_url.searchParams.set('scope', config.scope);
+                }
+                console.log(`DEBUG: redirect url: ${authorize_url.toString()}`);
+                window.location.assign(authorize_url.toString());
             } else {
                 let error = data.message ? data.message : 'unknown error';
-                set_response_area(`Couldn't save state! err = ${error}`);
+                set_response_area(`Couldn't begin the authorization flow! err = ${error}`);
             }
         })
         .fail((jqXHR, textStatus, errorThrown) => {
             hide_busy();
-            set_response_area("Couldn't save state.");
-            alert("API failure! Couldn't save state.");
+            set_response_area("Couldn't begin the authorization flow.");
+            alert("API failure! Couldn't begin the authorization flow.");
         });
 };
 
@@ -227,6 +235,11 @@ const handle_refresh_button = (evt) => {
         .fail((jqXHR, textStatus, errorThrown) => {
             hide_busy();
             console.log('ERROR: refresh_token failed');
+            const message =
+                jqXHR.responseJSON && jqXHR.responseJSON.message
+                    ? jqXHR.responseJSON.message
+                    : 'Failed to refresh the token';
+            set_response_area(message);
         });
 };
 
@@ -312,7 +325,9 @@ const handle_request_token = (evt) => {
         })
         .fail((jqXHR, textStatus, errorThrown) => {
             hide_busy();
-            set_response_area(errorThrown);
+            const message =
+                jqXHR.responseJSON && jqXHR.responseJSON.message ? jqXHR.responseJSON.message : errorThrown;
+            set_response_area(message);
         });
 };
 
@@ -321,47 +336,16 @@ const handle_request_token = (evt) => {
  * @param {Event} evt
  */
 const handle_form_submit = (evt) => {
-    config.name = ui.form.config_name.val();
-    config.base_url = ui.form.base_url.val();
-    config.client_id = ui.form.client_id.val();
-    config.client_secret = ui.form.client_secret.val();
-    console.log('INFO handle_form_submit, config: ', config);
-    if (config.name && config.base_url && config.client_id && config.client_secret) {
+    const form_config = read_form_values();
+    console.log('INFO handle_form_submit, config: ', form_config);
+    if (is_config_complete(form_config)) {
+        config = Object.assign({}, config, form_config);
         hide_setup_dialog();
         save_config(config);
         ui.login_button.show();
-        // get_startup_data();
     } else {
-        alert('All fields are required!');
+        alert('All fields except scope are required!');
     }
-};
-
-/**
- * Reads configuration data from cookies into the global config object, and sets the values into the form.
- * @returns {Promise} resolved on success, or rejected with an error string.
- */
-const load_config = () => {
-    let p = new Promise((resolve, reject) => {
-        const config_name = get_current_config();
-
-        read_config(config_name)
-            .then((cfg) => {
-                config = cfg;
-                // Load config_list values.
-                load_config_list_values();
-                // Load form values.
-                ui.form.config_name.val(config.name);
-                ui.form.base_url.val(config.base_url);
-                ui.form.client_id.val(config.client_id);
-                ui.form.client_secret.val(config.client_secret);
-                resolve();
-            })
-            .catch((error) => {
-                reject(error);
-            });
-    });
-
-    return p;
 };
 
 /**
@@ -432,7 +416,7 @@ const handle_delete_config_delete_clicked = (evt) => {
  */
 const handle_new_config_clicked = (evt) => {
     console.log('Add new config clicked');
-    config = EMPTY_CONFIG;
+    config = Object.assign({}, EMPTY_CONFIG);
     clear_current_config();
     populate_setup_dialog();
     clear_response_area();
@@ -453,10 +437,11 @@ const save_config = (config) => {
         data: {
             id: config.id,
             name: config.name,
-            base_url: config.base_url,
+            authorize_url: config.authorize_url,
+            token_url: config.token_url,
             client_id: config.client_id,
             client_secret: config.client_secret,
-            api_server: config.api_server
+            scope: config.scope,
         },
         dataType: 'json',
     };
@@ -479,46 +464,6 @@ const save_config = (config) => {
             console.log('ERROR: save_config failed');
             alert('Failed to save the config');
         });
-};
-
-/**
- * Fetches the config from the server.
- * @param {string} config_name
- * @returns {Promise} resolves with the config object if successful, otherwise rejects with an error message.
- */
-const read_config = (config_name) => {
-    let p = new Promise((resolve, reject) => {
-        const url = `${API_BASE_URL}/v1/read_config`;
-
-        const opts = {
-            method: 'POST',
-            data: {
-                config_name: config_name,
-            },
-            dataType: 'json',
-        };
-
-        $.ajax(url, opts)
-            .then((data, textStatus, jqXHR) => {
-                console.log('INFO: (read_config) success');
-                if (data.status) {
-                    if (data.status === 'ok' && data.config) {
-                        console.log('Successfully read the config from the server.');
-                        resolve(data.config);
-                    } else {
-                        reject('Failed to read the config');
-                    }
-                } else {
-                    reject('Invalid response from the server');
-                }
-            })
-            .fail((jqXHR, textStatus, errorThrown) => {
-                console.log('ERROR: (read_config) failed');
-                reject('Failed to read the config from the server');
-            });
-    });
-
-    return p;
 };
 
 /**
@@ -581,7 +526,7 @@ const show_setup_dialog = () => {
 };
 
 /**
- * Show the setup dialog and overlay.
+ * Hides the setup dialog and overlay.
  */
 const hide_setup_dialog = () => {
     ui.dialog.hide();
@@ -595,22 +540,30 @@ const populate_setup_dialog = () => {
     const config_name = config && config.name ? config.name : '';
     ui.config_name.text(config_name);
     load_config_list_values();
-    ui.form.config_name.val(config.name);
-    ui.form.base_url.val(config.base_url);
-    ui.form.client_id.val(config.client_id);
-    ui.form.client_secret.val(config.client_secret);
+    ui.form.config_name.val(config.name || '');
+    ui.form.authorize_url.val(config.authorize_url || '');
+    ui.form.token_url.val(config.token_url || '');
+    ui.form.client_id.val(config.client_id || '');
+    ui.form.client_secret.val(config.client_secret || '');
+    ui.form.scope.val(config.scope || '');
 };
 
 /**
- * Read config and code/token data and configure the UI according to what we hve.
+ * Read config and code/token data and configure the UI according to what we have.
  */
 const configure_app = () => {
     ui.form.config_name.on('keyup change paste', handle_config_item_changed);
-    ui.form.base_url.on('keyup change paste', handle_config_item_changed);
+    ui.form.authorize_url.on('keyup change paste', handle_config_item_changed);
+    ui.form.token_url.on('keyup change paste', handle_config_item_changed);
     ui.form.client_id.on('keyup change paste', handle_config_item_changed);
     ui.form.client_secret.on('keyup change paste', handle_config_item_changed);
+    ui.form.scope.on('keyup change paste', handle_config_item_changed);
 
     clear_response_area();
+
+    // The oauth_handler redirect may carry an error from the authorization server.
+    const query_params = new URLSearchParams(window.location.search);
+    const oauth_error = query_params.get('error');
 
     get_startup_data()
         .then((data) => {
@@ -618,7 +571,11 @@ const configure_app = () => {
                 config_list = data.config_list;
             }
 
-            if (config.base_url && config.client_id && config.client_secret) {
+            if (oauth_error) {
+                set_response_area(`Authorization failed: ${oauth_error}`);
+            }
+
+            if (is_config_complete(config)) {
                 ui.login_button.show();
             } else {
                 show_setup_dialog();
@@ -637,7 +594,7 @@ const configure_app = () => {
  * @returns {Promise} resolves with startup data, or rejects with error message.
  */
 const get_startup_data = (config_name = null) => {
-    console.log('INFO: in handle_refresh_button');
+    console.log('INFO: in get_startup_data');
 
     let p = new Promise((resolve, reject) => {
         config_name = config_name || get_current_config();
@@ -714,7 +671,7 @@ const process_startup_data = (data) => {
 };
 
 /**
- * Read the current config name (from local storage)
+ * Stores the current config name (in local storage)
  * @param {string} config_name
  * @returns {string} The inserted value.
  */
