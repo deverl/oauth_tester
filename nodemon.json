@@ -1,0 +1,6 @@
+{
+    "watch": ["app.js", "bin", "routes", "server", "constants", "views"],
+    "ext": "js,json,hbs",
+    "ignore": ["node_modules", "db", "*.db", "public"],
+    "delay": 200
+}

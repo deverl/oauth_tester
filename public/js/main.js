@@ -36,6 +36,7 @@ $(document).ready(() => {
     ui.form.close_x = $('div.inner-container div.dialog-close-x');
     ui.form.config_list = $('#config_list');
     ui.form.add_new_config_button = $('#add_new_config');
+    ui.form.clone_config_button = $('#clone_config');
     ui.form.config_name = $('#config_name_input');
     ui.form.authorize_url = $('#authorize_url_input');
     ui.form.token_url = $('#token_url_input');
@@ -43,8 +44,10 @@ $(document).ready(() => {
     ui.form.client_secret = $('#client_secret_input');
     ui.form.scope = $('#scope_input');
     ui.form.submit_button = $('#form_submit_button');
+    ui.form.save_status = $('#save_status');
 
     ui.form.submit_button.prop('disabled', true);
+    ui.form.clone_config_button.prop('disabled', true);
 
     ui.login_button.click(handle_login_button);
     ui.refresh_token_button.click(handle_refresh_button);
@@ -58,8 +61,13 @@ $(document).ready(() => {
     });
 
     ui.form.close_x.click((evt) => {
-        ui.dialog.hide();
-        ui.overlay.hide();
+        hide_setup_dialog();
+    });
+
+    $(document).on('keydown', (evt) => {
+        if (evt.key === 'Escape' && ui.dialog.hasClass('is-open')) {
+            hide_setup_dialog();
+        }
     });
 
     ui.setup_button.click(handle_setup);
@@ -77,15 +85,84 @@ const is_config_complete = (cfg) => {
 };
 
 /**
+ * Returns true if the form has anything worth cloning.
+ * @param {Object} cfg
+ * @returns {boolean}
+ */
+const has_cloneable_values = (cfg) => {
+    return !!(cfg && (cfg.name || cfg.authorize_url || cfg.token_url || cfg.client_id || cfg.client_secret || cfg.scope));
+};
+
+/**
  * Checks to see if we have values for all required fields, and enables the submit button if so.
  */
 const handle_config_item_changed = (evt) => {
     const form_config = read_form_values();
 
-    if (is_config_complete(form_config)) {
-        ui.form.submit_button.prop('disabled', false);
-    } else {
-        ui.form.submit_button.prop('disabled', true);
+    ui.form.submit_button.prop('disabled', !is_config_complete(form_config));
+    ui.form.clone_config_button.prop('disabled', !has_cloneable_values(form_config));
+
+    // Only clear status for real user edits (keyup/change/paste), not programmatic refreshes.
+    if (evt) {
+        clear_save_status();
+    }
+};
+
+/**
+ * Builds a unique configuration name for a clone.
+ * @param {string} base_name
+ * @returns {string}
+ */
+const unique_copy_name = (base_name) => {
+    const root = (base_name || 'Config').trim() || 'Config';
+    let candidate = `${root} (copy)`;
+    let n = 2;
+
+    while (config_list.includes(candidate)) {
+        candidate = `${root} (copy ${n})`;
+        n += 1;
+    }
+
+    return candidate;
+};
+
+/**
+ * Shows a short-lived status message next to Save.
+ * @param {string} message
+ * @param {boolean} is_error
+ */
+const show_save_status = (message, is_error = false) => {
+    if (!ui.form.save_status) {
+        return;
+    }
+
+    ui.form.save_status
+        .text(message)
+        .toggleClass('is-error', !!is_error)
+        .addClass('is-visible');
+
+    if (ui.form.save_status_timer) {
+        clearTimeout(ui.form.save_status_timer);
+    }
+
+    ui.form.save_status_timer = setTimeout(() => {
+        clear_save_status();
+    }, 2500);
+};
+
+/**
+ * Clears the Save status message.
+ */
+const clear_save_status = () => {
+    if (!ui.form.save_status) {
+        return;
+    }
+
+    ui.form.save_status.removeClass('is-visible is-error').text('');
+
+    if (ui.form.save_status_timer) {
+        clearTimeout(ui.form.save_status_timer);
+        ui.form.save_status_timer = null;
     }
 };
 
@@ -333,18 +410,23 @@ const handle_request_token = (evt) => {
 
 /**
  * Verifies that the required fields are present, and if so saves them as the current config.
+ * Leaves the settings dialog open so the user can keep editing or close with X.
  * @param {Event} evt
  */
 const handle_form_submit = (evt) => {
     const form_config = read_form_values();
     console.log('INFO handle_form_submit, config: ', form_config);
     if (is_config_complete(form_config)) {
-        config = Object.assign({}, config, form_config);
-        hide_setup_dialog();
+        // Keep id when editing/renaming an existing row. Clones and New drafts have no id.
+        const next_config = Object.assign({}, form_config);
+        if (config && config.id) {
+            next_config.id = config.id;
+        }
+        config = next_config;
         save_config(config);
         ui.login_button.show();
     } else {
-        alert('All fields except scope are required!');
+        show_save_status('All fields except scope are required', true);
     }
 };
 
@@ -352,23 +434,37 @@ const handle_form_submit = (evt) => {
  * Sets up the config list in the setup dialog using global values.
  */
 const load_config_list_values = () => {
-    $('.config-list-item').off('click');
     ui.form.config_list.empty();
+
+    if (!config_list.length) {
+        ui.form.config_list.append(
+            $(`<div class='config-list-empty'>No configurations yet. Use New or fill in the form and Save.</div>`)
+        );
+        return;
+    }
+
     $.each(config_list, (idx, val) => {
-        const $text = $(`<div class='config-list-item-text'>${val}</div>`);
-        const $icon = $(`<div class='config-list-item-icon'><i class="trash alternate icon"></i></div>`);
-        const $item = $(`<div class='config-list-item'></div>`);
-        $item.append($text);
-        $item.append($icon);
+        const $text = $(`<div class='config-list-item-text'></div>`).text(val);
+        const $clone = $(
+            `<div class='config-list-item-icon config-list-item-clone' title='Clone'><i class="copy icon"></i></div>`
+        );
+        const $trash = $(
+            `<div class='config-list-item-icon config-list-item-delete' title='Delete'><i class="trash alternate icon"></i></div>`
+        );
+        const $actions = $(`<div class='config-list-item-actions'></div>`).append($clone, $trash);
+        const $item = $(`<div class='config-list-item'></div>`).attr('data-config-name', val);
+        $item.append($text, $actions);
         if (val === config.name) {
             $item.addClass('selected');
         }
         ui.form.config_list.append($item);
     });
 
-    $('.config-list-item').on('click', handle_config_list_item_name_clicked);
-    $('.config-list-item-text').on('click', handle_config_list_item_name_clicked);
-    $('.config-list-item-icon').on('click', handle_delete_config_delete_clicked);
+    ui.form.config_list
+        .off('click')
+        .on('click', '.config-list-item', handle_config_list_item_name_clicked)
+        .on('click', '.config-list-item-clone', handle_clone_from_list_clicked)
+        .on('click', '.config-list-item-delete', handle_delete_config_delete_clicked);
 };
 
 /**
@@ -376,8 +472,13 @@ const load_config_list_values = () => {
  * @param {*} evt
  */
 const handle_config_list_item_name_clicked = (evt) => {
+    // Ignore clicks on row action icons (clone / delete).
+    if ($(evt.target).closest('.config-list-item-actions').length) {
+        return;
+    }
+
     const $e = $(evt.currentTarget);
-    const config_name = $e.text();
+    const config_name = $e.attr('data-config-name');
     if (config_name) {
         set_current_config(config_name);
         get_startup_data(config_name).then((data) => {
@@ -393,21 +494,45 @@ const handle_config_list_item_name_clicked = (evt) => {
  * @param {*} evt
  */
 const handle_delete_config_delete_clicked = (evt) => {
-    const $e = $(evt.currentTarget);
-    const $parent = $e.parent();
-    const $title = $parent.find('.config-list-item-text');
-    const config_name = $title.text();
+    evt.preventDefault();
+    evt.stopPropagation();
+
+    const $item = $(evt.currentTarget).closest('.config-list-item');
+    const config_name = $item.attr('data-config-name');
     if (config_name) {
         console.log(`Clicked on delete for config ${config_name}`);
         if (confirm(`Are you sure you want to delete the ${config_name} configuration?`)) {
             console.log(`Delete configuration: ${config_name}`);
             delete_config(config_name)
-                .then(() => {})
-                .catch((err) => {});
+                .then(() => {
+                    show_save_status('Deleted');
+                })
+                .catch((err) => {
+                    show_save_status('Delete failed', true);
+                });
         }
     } else {
         console.log("Couldn't find config item in delete event handler");
     }
+};
+
+/**
+ * Clones a listed configuration into a new unsaved draft.
+ * @param {*} evt
+ */
+const handle_clone_from_list_clicked = (evt) => {
+    evt.preventDefault();
+    evt.stopPropagation();
+
+    const $item = $(evt.currentTarget).closest('.config-list-item');
+    const config_name = $item.attr('data-config-name');
+    if (!config_name) {
+        return;
+    }
+
+    get_startup_data(config_name).then(() => {
+        begin_clone_from_current();
+    });
 };
 
 /**
@@ -420,7 +545,48 @@ const handle_new_config_clicked = (evt) => {
     clear_current_config();
     populate_setup_dialog();
     clear_response_area();
+    clear_save_status();
+    handle_config_item_changed();
     ui.form.config_name.focus();
+};
+
+/**
+ * Handles clicks on the sidebar Clone button — clones the form/current config.
+ * @param {*} evt
+ */
+const handle_clone_config_clicked = (evt) => {
+    const form_config = read_form_values();
+    if (!has_cloneable_values(form_config)) {
+        return;
+    }
+
+    // Prefer form values so in-progress edits are included in the clone.
+    config = Object.assign({}, EMPTY_CONFIG, form_config);
+    begin_clone_from_current();
+};
+
+/**
+ * Turns the current config into a new unsaved clone with a unique name.
+ */
+const begin_clone_from_current = () => {
+    const source = Object.assign({}, EMPTY_CONFIG, config, read_form_values());
+    const new_name = unique_copy_name(source.name);
+
+    config = {
+        name: new_name,
+        authorize_url: source.authorize_url || '',
+        token_url: source.token_url || '',
+        client_id: source.client_id || '',
+        client_secret: source.client_secret || '',
+        scope: source.scope || '',
+    };
+
+    clear_current_config();
+    populate_setup_dialog();
+    clear_response_area();
+    handle_config_item_changed();
+    show_save_status('Cloned — rename and Save');
+    ui.form.config_name.focus().select();
 };
 
 /**
@@ -429,20 +595,26 @@ const handle_new_config_clicked = (evt) => {
  */
 const save_config = (config) => {
     set_current_config(config.name);
+    ui.form.submit_button.prop('disabled', true);
 
     const url = `${API_BASE_URL}/v1/save_config`;
 
+    const data = {
+        name: config.name,
+        authorize_url: config.authorize_url,
+        token_url: config.token_url,
+        client_id: config.client_id,
+        client_secret: config.client_secret,
+        scope: config.scope,
+    };
+
+    if (config.id) {
+        data.id = config.id;
+    }
+
     const opts = {
         method: 'POST',
-        data: {
-            id: config.id,
-            name: config.name,
-            authorize_url: config.authorize_url,
-            token_url: config.token_url,
-            client_id: config.client_id,
-            client_secret: config.client_secret,
-            scope: config.scope,
-        },
+        data: data,
         dataType: 'json',
     };
 
@@ -450,19 +622,22 @@ const save_config = (config) => {
         .then((data, textStatus, jqXHR) => {
             console.log('INFO: save_config success');
             process_startup_data(data);
+            handle_config_item_changed();
             if (data.status) {
                 if (data.status === 'ok') {
                     console.log('Successfully saved the config on the server.');
+                    show_save_status('Saved');
                 } else {
-                    alert('Failed to save the config');
+                    show_save_status('Failed to save', true);
                 }
             } else {
-                alert('Invalid response from the server');
+                show_save_status('Invalid server response', true);
             }
         })
         .fail((jqXHR, textStatus, errorThrown) => {
             console.log('ERROR: save_config failed');
-            alert('Failed to save the config');
+            handle_config_item_changed();
+            show_save_status('Failed to save', true);
         });
 };
 
@@ -487,15 +662,11 @@ const delete_config = (config_name) => {
             .then((data, textStatus, jqXHR) => {
                 console.log('INFO: (delete_config) success');
                 process_startup_data(data);
-                if (data.status) {
-                    if (data.status === 'ok' && data.config) {
-                        console.log('Successfully deleted the config from the server.');
-                        resolve(data.config);
-                    } else {
-                        reject('Failed to read the config');
-                    }
+                if (data.status === 'ok') {
+                    console.log('Successfully deleted the config from the server.');
+                    resolve(data.config || null);
                 } else {
-                    reject('Invalid response from the server');
+                    reject(data.message || 'Failed to delete the config');
                 }
             })
             .fail((jqXHR, textStatus, errorThrown) => {
@@ -521,16 +692,18 @@ const handle_setup = (evt) => {
 const show_setup_dialog = () => {
     populate_setup_dialog();
     handle_config_item_changed();
+    clear_save_status();
     ui.overlay.show();
-    ui.dialog.show();
+    ui.dialog.addClass('is-open');
 };
 
 /**
  * Hides the setup dialog and overlay.
  */
 const hide_setup_dialog = () => {
-    ui.dialog.hide();
+    ui.dialog.removeClass('is-open');
     ui.overlay.hide();
+    clear_save_status();
 };
 
 /**
@@ -586,6 +759,7 @@ const configure_app = () => {
         });
 
     ui.form.add_new_config_button.on('click', handle_new_config_clicked);
+    ui.form.clone_config_button.on('click', handle_clone_config_clicked);
 };
 
 /**
@@ -646,8 +820,12 @@ const process_startup_data = (data) => {
                 set_current_config(config.name);
             }
             populate_setup_dialog();
+            handle_config_item_changed();
         } else {
-            config = {};
+            config = Object.assign({}, EMPTY_CONFIG);
+            clear_current_config();
+            populate_setup_dialog();
+            handle_config_item_changed();
         }
 
         if ('port' in data) {

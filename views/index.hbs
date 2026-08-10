@@ -35,94 +35,61 @@
 <div id='form_container'>
     <form name='oauth_config_form' id='oauth_config_form'>
         <div class='inner-container'>
-            <!-- Title -->
-            <div class='dialog-title'>OAuth Server Configuration</div>
-            <div class='dialog-close-x'>
-                <img src='/images/baseline-close-24px.svg' alt='close' />
-            </div>
-            <!-- Config list/chooser -->
-            <div class='config-list-title'>Stored Configurations</div>
-            <div id='config_list_container'>
-                <div id='config_list'></div>
-                <div id='config_list_button_container'>
-                    <!-- Icon and text for add_new_config button -->
-                    <div class='config-list-button' id='add_new_config'>
-                        <i class='plus icon'></i>
-                        <div class='config-button-title'>Add Config</div>
-                    </div>
+            <div class='dialog-header'>
+                <div class='dialog-title'>Settings</div>
+                <div class='dialog-close-x' title='Close'>
+                    <img src='/images/baseline-close-24px.svg' alt='close' />
                 </div>
             </div>
-            <table>
-                <!-- Config Name Input -->
-                <tr>
-                    <td class='label-td'>
-                        <div>
-                            <label for='config_name_input'>Config Name:</label>
-                        </div>
-                    </td>
-                    <td>
-                        <input type='text' id='config_name_input' name='config_name_input' placeholder='configuration name' />
-                    </td>
-                </tr>
-                <!-- authorize_url Input -->
-                <tr>
-                    <td class='label-td'>
-                        <div>
-                            <label for='authorize_url_input'>Authorize URL:</label>
-                        </div>
-                    </td>
-                    <td>
-                        <input type='text' id='authorize_url_input' name='authorize_url_input' placeholder='https://yourhost.com/authorize' />
-                    </td>
-                </tr>
-                <!-- token_url Input -->
-                <tr>
-                    <td class='label-td'>
-                        <div>
-                            <label for='token_url_input'>Token URL:</label>
-                        </div>
-                    </td>
-                    <td>
-                        <input type='text' id='token_url_input' name='token_url_input' placeholder='https://yourhost.com/token' />
-                    </td>
-                </tr>
-                <!-- Client ID Input -->
-                <tr>
-                    <td class='label-td'>
-                        <div>
-                            <label for='client_id_input'>Client ID:</label>
-                        </div>
-                    </td>
-                    <td>
-                        <input type='text' id='client_id_input' name='client_id_input' placeholder='client id' />
-                    </td>
-                </tr>
-                <!-- Client Secret Input -->
-                <tr>
-                    <td class='label-td'>
-                        <div>
-                            <label for='client_secret_input'>Client Secret:</label>
-                        </div>
-                    </td>
-                    <td>
-                        <input type='text' id='client_secret_input' name='client_secret_input' placeholder='client secret' />
-                    </td>
-                </tr>
-                <!-- Scope Input -->
-                <tr>
-                    <td class='label-td'>
-                        <div>
-                            <label for='scope_input'>Scope (optional):</label>
-                        </div>
-                    </td>
-                    <td>
-                        <input type='text' id='scope_input' name='scope_input' placeholder='space-separated scopes' />
-                    </td>
-                </tr>
-            </table>
 
-            <div class='button-row'>
-                <input type='submit' id='form_submit_button' value='OK' class='ui primary button' />
+            <div class='settings-layout'>
+                <aside class='settings-sidebar'>
+                    <div class='config-list-title'>Configurations</div>
+                    <div id='config_list'></div>
+                    <div id='config_list_button_container'>
+                        <button type='button' class='config-list-button' id='add_new_config' title='Add a blank configuration'>
+                            <i class='plus icon'></i>
+                            <span>New</span>
+                        </button>
+                        <button type='button' class='config-list-button' id='clone_config' title='Clone the current configuration'>
+                            <i class='copy icon'></i>
+                            <span>Clone</span>
+                        </button>
+                    </div>
+                </aside>
+
+                <div class='settings-form'>
+                    <div class='settings-form-title'>Configuration details</div>
+                    <div class='field-row'>
+                        <label for='config_name_input'>Config Name</label>
+                        <input type='text' id='config_name_input' name='config_name_input' placeholder='configuration name' autocomplete='off' />
+                    </div>
+                    <div class='field-row'>
+                        <label for='authorize_url_input'>Authorize URL</label>
+                        <input type='text' id='authorize_url_input' name='authorize_url_input' placeholder='https://yourhost.com/authorize' autocomplete='off' />
+                    </div>
+                    <div class='field-row'>
+                        <label for='token_url_input'>Token URL</label>
+                        <input type='text' id='token_url_input' name='token_url_input' placeholder='https://yourhost.com/token' autocomplete='off' />
+                    </div>
+                    <div class='field-row'>
+                        <label for='client_id_input'>Client ID</label>
+                        <input type='text' id='client_id_input' name='client_id_input' placeholder='client id' autocomplete='off' />
+                    </div>
+                    <div class='field-row'>
+                        <label for='client_secret_input'>Client Secret</label>
+                        <input type='text' id='client_secret_input' name='client_secret_input' placeholder='client secret' autocomplete='off' />
+                    </div>
+                    <div class='field-row'>
+                        <label for='scope_input'>Scope <span class='optional'>(optional)</span></label>
+                        <input type='text' id='scope_input' name='scope_input' placeholder='space-separated scopes' autocomplete='off' />
+                    </div>
+
+                    <div class='button-row'>
+                        <span id='save_status' class='save-status' aria-live='polite'></span>
+                        <input type='submit' id='form_submit_button' value='Save' class='ui primary button' />
+                    </div>
+                </div>
             </div>
         </div>
     </form>
