@@ -1,6 +1,5 @@
 const CONFIG_NAME_KEY_NAME = 'config_name';
 const API_BASE_URL = '/api';
-const DEFAULT_HTTP_PORT = 4000;
 const EMPTY_CONFIG = {
     name: '',
     authorize_url: '',
@@ -10,8 +9,6 @@ const EMPTY_CONFIG = {
     public_client: false,
     scope: '',
 };
-
-let http_port = DEFAULT_HTTP_PORT;
 
 let config = EMPTY_CONFIG;
 
@@ -924,12 +921,6 @@ const process_startup_data = (data) => {
             handle_config_item_changed();
         }
 
-        if ('port' in data) {
-            http_port = data.port;
-        } else {
-            http_port = DEFAULT_HTTP_PORT;
-        }
-
         if (data.code) {
             set_response_area(data.code);
             ui.request_token_button.show();
@@ -947,10 +938,9 @@ const process_startup_data = (data) => {
 /**
  * Stores the current config name (in local storage)
  * @param {string} config_name
- * @returns {string} The inserted value.
  */
 const set_current_config = (config_name = '') => {
-    return localStorage.setItem(CONFIG_NAME_KEY_NAME, config_name);
+    localStorage.setItem(CONFIG_NAME_KEY_NAME, config_name);
 };
 
 /**
@@ -963,9 +953,7 @@ const get_current_config = () => {
 
 /**
  * Clear the current config name from local storage.
- * @returns {boolean}     true if the config name was cleared, false otherwise.
  */
 const clear_current_config = () => {
-    const ret = set_current_config('');
-    return ret === '';
+    localStorage.removeItem(CONFIG_NAME_KEY_NAME);
 };

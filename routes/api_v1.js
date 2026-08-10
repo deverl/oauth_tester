@@ -234,7 +234,7 @@ router.post('/exchange_code_for_token', (req, res, next) => {
 
         db.delete_code(config_name);
 
-        const config = db.get_config_from_config_name(config_name);
+        const config = db.read_config(config_name);
 
         if (config) {
             oauth
@@ -246,7 +246,7 @@ router.post('/exchange_code_for_token', (req, res, next) => {
                 })
                 .catch((err) => {
                     res.status(400);
-                    o = { status: 'fail', message: `API failure: ${err}` };
+                    o = { status: 'fail', message: `API failure: ${err.message || err}` };
                     db.delete_code(config.name);
                     res.send(o);
                 });
@@ -272,7 +272,7 @@ router.post('/refresh_token', (req, res, next) => {
     if (body.config_name) {
         const config_name = body.config_name;
 
-        const config = db.get_config_from_config_name(config_name);
+        const config = db.read_config(config_name);
 
         oauth
             .refresh_token(config)
@@ -283,7 +283,7 @@ router.post('/refresh_token', (req, res, next) => {
             })
             .catch((err) => {
                 res.status(400);
-                o = { status: 'fail', message: `API failure: ${err}` };
+                o = { status: 'fail', message: `API failure: ${err.message || err}` };
                 res.send(o);
             });
     } else {

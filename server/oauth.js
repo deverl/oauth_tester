@@ -27,7 +27,7 @@ const token_request = async (token_url, params) => {
             body: new URLSearchParams(params).toString(),
         });
     } catch (e) {
-        throw `Token request to ${token_url} failed: ${e.message || e}`;
+        throw new Error(`Token request to ${token_url} failed: ${e.message || e}`);
     }
 
     const body = await response.text();
@@ -36,17 +36,17 @@ const token_request = async (token_url, params) => {
     try {
         json = JSON.parse(body);
     } catch (e) {
-        throw `Token endpoint returned non-JSON response (HTTP ${response.status}): ${body}`;
+        throw new Error(`Token endpoint returned non-JSON response (HTTP ${response.status}): ${body}`);
     }
 
     // Error responses use the 'error' member (RFC 6749 section 5.2).
     if (json.error) {
         const description = json.error_description ? `: ${json.error_description}` : '';
-        throw `${json.error}${description}`;
+        throw new Error(`${json.error}${description}`);
     }
 
     if (!response.ok) {
-        throw `Token endpoint returned HTTP ${response.status}: ${body}`;
+        throw new Error(`Token endpoint returned HTTP ${response.status}: ${body}`);
     }
 
     return json;
@@ -61,7 +61,7 @@ const token_request = async (token_url, params) => {
  */
 const get_token = async (config, code) => {
     if (!config || !config.token_url) {
-        throw 'Invalid config (no token_url)';
+        throw new Error('Invalid config (no token_url)');
     }
 
     const params = {
@@ -89,7 +89,7 @@ const get_token = async (config, code) => {
     const token = db.read_token(config.name);
 
     if (!token) {
-        throw 'Failed to store the token';
+        throw new Error('Failed to store the token');
     }
 
     return token;
@@ -103,19 +103,19 @@ const get_token = async (config, code) => {
  */
 const refresh_token = async (config) => {
     if (!config || !config.token_url) {
-        throw 'Invalid config (no token_url)';
+        throw new Error('Invalid config (no token_url)');
     }
 
     const token_wrapper = db.read_token(config.name);
 
     if (!token_wrapper || !token_wrapper.token) {
-        throw 'No token data';
+        throw new Error('No token data');
     }
 
     const current_token = token_wrapper.token;
 
     if (!current_token.refresh_token) {
-        throw 'No refresh token';
+        throw new Error('No refresh token');
     }
 
     const params = {
@@ -139,12 +139,14 @@ const refresh_token = async (config) => {
     const token = db.read_token(config.name);
 
     if (!token) {
-        throw 'Failed to store the refreshed token';
+        throw new Error('Failed to store the refreshed token');
     }
 
     return token;
 };
 
-module.exports.REDIRECT_URI = REDIRECT_URI;
-module.exports.get_token = get_token;
-module.exports.refresh_token = refresh_token;
+module.exports = {
+    REDIRECT_URI,
+    get_token,
+    refresh_token,
+};

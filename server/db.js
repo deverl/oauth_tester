@@ -1,10 +1,13 @@
-const sqlite3 = require('better-sqlite3');
-const db = new sqlite3('oauth_test.db');
+const path = require('path');
+const Database = require('better-sqlite3');
 
 const utils = require('./utils');
-const constants = require('./constants');
+const { PROP_TYPES } = require('../constants/constants');
 
-const { PROP_TYPES } = constants;
+const DB_PATH = path.join(__dirname, '..', 'oauth_test.db');
+
+/** @type {import('better-sqlite3').Database | null} */
+let db = null;
 
 const CONFIG_TABLE_SQL = `CREATE TABLE IF NOT EXISTS
      config(id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,6 +27,17 @@ const PROPS_TABLE_SQL = `CREATE TABLE IF NOT EXISTS
     )`;
 
 /**
+ * Returns the open database connection.
+ * @returns {import('better-sqlite3').Database}
+ */
+const get_db = () => {
+    if (!db) {
+        throw new Error('Database has not been initialized; call init() first');
+    }
+    return db;
+};
+
+/**
  * Migrates databases created by older versions of this app.
  * - The config table used to store a single provider `base_url` from which the
  *   authorization and token endpoints were derived. The endpoints are now stored
@@ -32,13 +46,14 @@ const PROPS_TABLE_SQL = `CREATE TABLE IF NOT EXISTS
  *   also allows 'verifier' (PKCE code verifier).
  */
 const migrate_legacy_schema = () => {
-    const config_table = db
+    const database = get_db();
+    const config_table = database
         .prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'config'`)
         .get();
 
     if (config_table && config_table.sql.includes('base_url')) {
         console.log('INFO: (migrate_legacy_schema) Migrating legacy config table');
-        db.exec(`
+        database.exec(`
             ALTER TABLE config RENAME TO config_legacy;
             ${CONFIG_TABLE_SQL};
             INSERT INTO config (id, name, authorize_url, token_url, client_id, client_secret)
@@ -53,13 +68,13 @@ const migrate_legacy_schema = () => {
         `);
     }
 
-    const props_table = db
+    const props_table = database
         .prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'props'`)
         .get();
 
     if (props_table && !props_table.sql.includes(PROP_TYPES.VERIFIER)) {
         console.log('INFO: (migrate_legacy_schema) Migrating legacy props table');
-        db.exec(`
+        database.exec(`
             ALTER TABLE props RENAME TO props_legacy;
             ${PROPS_TABLE_SQL};
             INSERT INTO props (id, type, config_id, value)
@@ -71,19 +86,25 @@ const migrate_legacy_schema = () => {
 
 const init = () => {
     try {
+        if (!db) {
+            db = new Database(DB_PATH);
+        }
+
         migrate_legacy_schema();
 
-        db.prepare(CONFIG_TABLE_SQL).run();
-        db.prepare(`CREATE INDEX IF NOT EXISTS config_name_idx ON config (name)`).run();
+        const database = get_db();
+        database.prepare(CONFIG_TABLE_SQL).run();
+        database.prepare(`CREATE INDEX IF NOT EXISTS config_name_idx ON config (name)`).run();
 
-        db.prepare(PROPS_TABLE_SQL).run();
-        db.prepare(`CREATE INDEX IF NOT EXISTS value_idx ON props (value)`).run();
+        database.prepare(PROPS_TABLE_SQL).run();
+        database.prepare(`CREATE INDEX IF NOT EXISTS value_idx ON props (value)`).run();
 
         // Transient per-flow values are meaningless across restarts.
         delete_all_of_type(PROP_TYPES.STATE);
         delete_all_of_type(PROP_TYPES.VERIFIER);
     } catch (e) {
         console.error(`ERROR: (init) Exception: ${e}`);
+        throw e;
     }
 };
 
@@ -93,7 +114,7 @@ const init = () => {
 const get_first_config = () => {
     let config = null;
     try {
-        const q = db.prepare(`SELECT * FROM config ORDER BY id DESC LIMIT 1`);
+        const q = get_db().prepare(`SELECT * FROM config ORDER BY id DESC LIMIT 1`);
         const r = q.get();
         if (r) {
             config = r;
@@ -105,43 +126,23 @@ const get_first_config = () => {
 };
 
 /**
- * Lookup a config from the config name.
- * @param {string} config_name
- * @returns {Object|null}
- */
-const get_config_from_config_name = (config_name) => {
-    let result = null;
-    try {
-        const q = db.prepare(`SELECT * FROM config WHERE name = ?`);
-        const r = q.get(config_name);
-        if (r) {
-            result = r;
-        }
-    } catch (e) {
-        console.error(`ERROR: (get_config_from_config_name) Exception ${e}`);
-    }
-    return result;
-};
-
-/**
  * Utility function to look up a config ID from its name
  * @param {string} config_name      The name of the config
- * @returns {integer|null}          The config ID if found, null otherwise.
+ * @returns {number|null}           The config ID if found, null otherwise.
  */
 const get_config_id_from_config_name = (config_name) => {
-    let result = null;
-    const config = get_config_from_config_name(config_name);
+    const config = read_config(config_name);
     if (config && config.id) {
-        result = config.id;
+        return config.id;
     }
-    return result;
+    return null;
 };
 
 /**
  * Saves the authorization code for the specified config.
  * @param {string} config_name
  * @param {string} code
- * @returns {integer|null}          Record ID or null
+ * @returns {number|null}          Record ID or null
  */
 const save_code = (config_name, code) => {
     delete_prop(config_name, PROP_TYPES.CODE);
@@ -176,7 +177,7 @@ const delete_code = (config_name) => {
  * object that includes meta data about the expiration date/time of the token.
  * @param {string} config_name
  * @param {Object|string} token
- * @returns {integer|null}              Record ID or null
+ * @returns {number|null}              Record ID or null
  */
 const save_token = (config_name, token) => {
     if (typeof token === 'string') {
@@ -189,7 +190,11 @@ const save_token = (config_name, token) => {
     }
 
     if (!token.expire_time_ms) {
-        const timestamp = new Date().getTime();
+        if (typeof token.expires_in !== 'number' || !Number.isFinite(token.expires_in)) {
+            console.error('ERROR: (save_token) Missing or invalid expires_in');
+            return null;
+        }
+        const timestamp = Date.now();
         const expire_time_ms = timestamp + token.expires_in * 1000;
         const expiration = new Date(expire_time_ms).toString();
         token = { token: token, expire_time_ms: expire_time_ms, expiration: expiration };
@@ -239,7 +244,7 @@ const delete_token = (config_name) => {
  * Saves the PKCE code verifier associated with the given configuration.
  * @param {string} config_name
  * @param {string} verifier
- * @returns {integer|null}      Record ID or null
+ * @returns {number|null}      Record ID or null
  */
 const save_verifier = (config_name, verifier) => {
     delete_prop(config_name, PROP_TYPES.VERIFIER);
@@ -278,7 +283,7 @@ const delete_verifier = (config_name) => {
 const read_prop = (config_name, type) => {
     let result = null;
     try {
-        const q = db.prepare(
+        const q = get_db().prepare(
             `SELECT value FROM props JOIN config ON config.id = props.config_id WHERE name = ? AND props.type = ?`
         );
         const r = q.all(config_name, type);
@@ -305,7 +310,7 @@ const delete_prop = (config_name, type) => {
     try {
         const config_id = get_config_id_from_config_name(config_name);
         if (config_id) {
-            const q = db.prepare(`DELETE FROM props WHERE type = ? AND config_id = ?`);
+            const q = get_db().prepare(`DELETE FROM props WHERE type = ? AND config_id = ?`);
             const info = q.run(type, config_id);
             if (info && info.changes) {
                 result = true;
@@ -324,7 +329,7 @@ const delete_prop = (config_name, type) => {
  * @param {string} config_name      Name of the config
  * @param {string} type             Type of prop (one of PROP_TYPES)
  * @param {string} value            Prop to be stored.
- * @returns {integer|null}          Record ID or null
+ * @returns {number|null}          Record ID or null
  */
 const save_prop_by_config_name = (config_name, type, value) => {
     let result = null;
@@ -339,10 +344,10 @@ const save_prop_by_config_name = (config_name, type, value) => {
 
 /**
  * Store a prop in the DB by config ID
- * @param {integer} config_id       ID of the config
+ * @param {number} config_id       ID of the config
  * @param {string} type             Type of prop (one of PROP_TYPES)
  * @param {string} value            Prop to be stored.
- * @returns {integer|null}          Record ID or null
+ * @returns {number|null}          Record ID or null
  */
 const save_prop_by_config_id = (config_id, type, value) => {
     let result = null;
@@ -351,7 +356,7 @@ const save_prop_by_config_id = (config_id, type, value) => {
         return result;
     }
     try {
-        const q = db.prepare(`INSERT INTO props (config_id, type, value) VALUES (?, ?, ?)`);
+        const q = get_db().prepare(`INSERT INTO props (config_id, type, value) VALUES (?, ?, ?)`);
         const info = q.run(config_id, type, value);
         if (info.changes && info.lastInsertRowid) {
             result = info.lastInsertRowid;
@@ -370,7 +375,7 @@ const save_prop_by_config_id = (config_id, type, value) => {
  * use the state value that they return to look up the configuration.
  * @param {string} config_name Name of the associated config
  * @param {string} state        State value to store
- * @returns {integer|null}      Record ID if successful, null if not
+ * @returns {number|null}      Record ID if successful, null if not
  */
 const save_state = (config_name, state) => {
     delete_prop(config_name, PROP_TYPES.STATE);
@@ -396,7 +401,7 @@ const get_config_from_prop_value = (type, value) => {
     let config = null;
 
     try {
-        const q = db.prepare(
+        const q = get_db().prepare(
             `SELECT config.* FROM config JOIN props ON config.id = props.config_id WHERE props.type = ? AND props.value = ?`
         );
         const r = q.all(type, value);
@@ -430,7 +435,7 @@ const get_config_from_state = (state) => {
  */
 const delete_all_of_type = (type) => {
     try {
-        const q = db.prepare(`DELETE FROM props WHERE type = ?`);
+        const q = get_db().prepare(`DELETE FROM props WHERE type = ?`);
         q.run(type);
     } catch (e) {
         console.error(`ERROR: (delete_all_of_type) Exception ${e}`);
@@ -441,7 +446,7 @@ const delete_all_of_type = (type) => {
  * Stores a config in the DB. Inserts a new record, or updates an existing one
  * (matched by id if given, otherwise by name).
  * @param {Object} config
- * @returns {integer|null}   record id if successful, null if not.
+ * @returns {number|null}   record id if successful, null if not.
  */
 const save_config = (config) => {
     const { name, authorize_url, token_url, client_id } = config;
@@ -465,14 +470,14 @@ const save_config = (config) => {
 
     try {
         if (id) {
-            const q = db.prepare(
+            const q = get_db().prepare(
                 `UPDATE config SET name = ?, authorize_url = ?, token_url = ?, client_id = ?, client_secret = ?, scope = ? WHERE id = ?`
             );
             const info = q.run(name, authorize_url, token_url, client_id, client_secret, scope, id);
             return info.changes ? id : null;
         }
 
-        const q = db.prepare(
+        const q = get_db().prepare(
             `INSERT INTO config (name, authorize_url, token_url, client_id, client_secret, scope) VALUES (?, ?, ?, ?, ?, ?)`
         );
         const info = q.run(name, authorize_url, token_url, client_id, client_secret, scope);
@@ -492,9 +497,9 @@ const save_config = (config) => {
 const read_config = (config_name) => {
     let config = null;
     try {
-        const q = db.prepare(`SELECT * FROM config WHERE name = ?`);
+        const q = get_db().prepare(`SELECT * FROM config WHERE name = ?`);
         const r = q.get(config_name);
-        if (r && r.name === config_name) {
+        if (r) {
             config = r;
         }
     } catch (e) {
@@ -504,6 +509,13 @@ const read_config = (config_name) => {
 };
 
 /**
+ * Alias for read_config (kept for existing call sites).
+ * @param {string} config_name
+ * @returns {Object|null}
+ */
+const get_config_from_config_name = (config_name) => read_config(config_name);
+
+/**
  * Deletes a config from the database.
  * @param {string} config_name
  * @returns {boolean}
@@ -511,7 +523,7 @@ const read_config = (config_name) => {
 const delete_config = (config_name) => {
     let result = false;
     try {
-        const q = db.prepare(`DELETE FROM config WHERE name = ?`);
+        const q = get_db().prepare(`DELETE FROM config WHERE name = ?`);
         const info = q.run(config_name);
         if (info && info.changes) {
             if (info.changes !== 1) {
@@ -535,7 +547,7 @@ const get_config_list = () => {
     let config_list = [];
 
     try {
-        const q = db.prepare(`SELECT name FROM config ORDER BY name ASC`);
+        const q = get_db().prepare(`SELECT name FROM config ORDER BY name ASC`);
         const r = q.all();
         if (Array.isArray(r)) {
             config_list = r.map((e) => e.name);
@@ -547,26 +559,24 @@ const get_config_list = () => {
     return config_list;
 };
 
-module.exports.init = init;
-module.exports.save_code = save_code;
-module.exports.read_code = read_code;
-module.exports.delete_code = delete_code;
-
-module.exports.save_token = save_token;
-module.exports.read_token = read_token;
-module.exports.delete_token = delete_token;
-
-module.exports.save_verifier = save_verifier;
-module.exports.read_verifier = read_verifier;
-module.exports.delete_verifier = delete_verifier;
-
-module.exports.save_state = save_state;
-module.exports.delete_state = delete_state;
-module.exports.get_config_from_state = get_config_from_state;
-module.exports.delete_config = delete_config;
-
-module.exports.get_first_config = get_first_config;
-module.exports.get_config_from_config_name = get_config_from_config_name;
-module.exports.save_config = save_config;
-module.exports.read_config = read_config;
-module.exports.get_config_list = get_config_list;
+module.exports = {
+    init,
+    save_code,
+    read_code,
+    delete_code,
+    save_token,
+    read_token,
+    delete_token,
+    save_verifier,
+    read_verifier,
+    delete_verifier,
+    save_state,
+    delete_state,
+    get_config_from_state,
+    delete_config,
+    get_first_config,
+    get_config_from_config_name,
+    save_config,
+    read_config,
+    get_config_list,
+};

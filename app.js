@@ -3,15 +3,13 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
+const favicon = require('serve-favicon');
 const db = require('./server/db');
-var favicon = require('serve-favicon');
 
 const indexRouter = require('./routes/index');
 const apiV1Router = require('./routes/api_v1');
 
 const app = express();
-
-global.appRoot = path.resolve(__dirname);
 
 // Do any required db initialization.
 db.init();
