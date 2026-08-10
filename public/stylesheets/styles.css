@@ -159,7 +159,7 @@ div.inner-container div.dialog-close-x:hover {
 
 .settings-layout {
     display: grid;
-    grid-template-columns: 240px minmax(0, 1fr);
+    grid-template-columns: 300px minmax(0, 1fr);
     gap: 22px;
     width: 100%;
 }
@@ -347,6 +347,86 @@ div.inner-container input[type='text']:focus,
 div.inner-container input[type='password']:focus {
     border-color: #1589ee;
     box-shadow: 0 0 0 3px rgba(21, 137, 238, 0.15);
+}
+
+.secret-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+}
+
+.secret-input {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+}
+
+.secret-input input {
+    padding-right: 40px;
+}
+
+.secret-input.is-disabled input {
+    background: #f4f6f9;
+    color: #7a869a;
+    cursor: not-allowed;
+}
+
+button.secret-toggle {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 28px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #54698d;
+    cursor: pointer;
+}
+
+button.secret-toggle:hover:not(:disabled) {
+    background: #eef2f7;
+    color: #16325c;
+}
+
+button.secret-toggle:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+button.secret-toggle .icon {
+    margin: 0;
+    opacity: 0.85;
+}
+
+.checkbox-label {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #3e4d66;
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkbox-label input[type='checkbox'] {
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.checkbox-label span {
+    line-height: 1.35;
 }
 
 div.button-row {

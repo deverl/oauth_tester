@@ -55,9 +55,11 @@ router.post('/save_config', (req, res, next) => {
     let o,
         body = req.body;
 
-    if (body.name && body.authorize_url && body.token_url && body.client_id && body.client_secret) {
+    // client_secret is optional for public clients that authenticate with PKCE only.
+    if (body.name && body.authorize_url && body.token_url && body.client_id) {
         body.authorize_url = ensure_scheme(body.authorize_url);
         body.token_url = ensure_scheme(body.token_url);
+        body.client_secret = body.client_secret || '';
         body.id = utils.force_int(body.id);
         const id = db.save_config(body);
         if (id) {

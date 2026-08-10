@@ -444,10 +444,12 @@ const delete_all_of_type = (type) => {
  * @returns {integer|null}   record id if successful, null if not.
  */
 const save_config = (config) => {
-    const { name, authorize_url, token_url, client_id, client_secret } = config;
+    const { name, authorize_url, token_url, client_id } = config;
+    // Empty string is valid for public clients (PKCE only, no client secret).
+    const client_secret = config.client_secret || '';
     const scope = config.scope || '';
 
-    if (!(name && authorize_url && token_url && client_id && client_secret)) {
+    if (!(name && authorize_url && token_url && client_id)) {
         console.error('ERROR: (save_config) Invalid request, missing or empty parameters');
         return null;
     }

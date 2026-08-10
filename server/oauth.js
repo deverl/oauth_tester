@@ -67,10 +67,14 @@ const get_token = async (config, code) => {
     const params = {
         grant_type: 'authorization_code',
         client_id: config.client_id,
-        client_secret: config.client_secret,
         code: code,
         redirect_uri: REDIRECT_URI,
     };
+
+    // Confidential clients include a secret; public clients rely on PKCE alone.
+    if (config.client_secret) {
+        params.client_secret = config.client_secret;
+    }
 
     // Include the PKCE code verifier if one was generated for this flow (RFC 7636).
     const verifier = db.read_verifier(config.name);
@@ -117,9 +121,12 @@ const refresh_token = async (config) => {
     const params = {
         grant_type: 'refresh_token',
         client_id: config.client_id,
-        client_secret: config.client_secret,
         refresh_token: current_token.refresh_token,
     };
+
+    if (config.client_secret) {
+        params.client_secret = config.client_secret;
+    }
 
     const response = await token_request(config.token_url, params);
 

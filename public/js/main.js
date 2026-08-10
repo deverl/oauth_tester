@@ -1,7 +1,15 @@
 const CONFIG_NAME_KEY_NAME = 'config_name';
 const API_BASE_URL = '/api';
 const DEFAULT_HTTP_PORT = 4000;
-const EMPTY_CONFIG = { name: '', authorize_url: '', token_url: '', client_id: '', client_secret: '', scope: '' };
+const EMPTY_CONFIG = {
+    name: '',
+    authorize_url: '',
+    token_url: '',
+    client_id: '',
+    client_secret: '',
+    public_client: false,
+    scope: '',
+};
 
 let http_port = DEFAULT_HTTP_PORT;
 
@@ -42,12 +50,16 @@ $(document).ready(() => {
     ui.form.token_url = $('#token_url_input');
     ui.form.client_id = $('#client_id_input');
     ui.form.client_secret = $('#client_secret_input');
+    ui.form.toggle_client_secret = $('#toggle_client_secret');
+    ui.form.public_client = $('#public_client_input');
     ui.form.scope = $('#scope_input');
     ui.form.submit_button = $('#form_submit_button');
     ui.form.save_status = $('#save_status');
 
     ui.form.submit_button.prop('disabled', true);
     ui.form.clone_config_button.prop('disabled', true);
+    ui.form.toggle_client_secret.on('click', handle_toggle_client_secret);
+    ui.form.public_client.on('change', handle_public_client_changed);
 
     ui.login_button.click(handle_login_button);
     ui.refresh_token_button.click(handle_refresh_button);
@@ -77,11 +89,15 @@ $(document).ready(() => {
 
 /**
  * Returns true if all required config fields are present.
+ * Client secret is required unless this is a public (PKCE-only) client.
  * @param {Object} cfg
  * @returns {boolean}
  */
 const is_config_complete = (cfg) => {
-    return !!(cfg && cfg.name && cfg.authorize_url && cfg.token_url && cfg.client_id && cfg.client_secret);
+    if (!(cfg && cfg.name && cfg.authorize_url && cfg.token_url && cfg.client_id)) {
+        return false;
+    }
+    return !!(cfg.public_client || cfg.client_secret);
 };
 
 /**
@@ -167,16 +183,83 @@ const clear_save_status = () => {
 };
 
 /**
+ * Sets whether the client secret is shown in plain text.
+ * @param {boolean} visible
+ */
+const set_client_secret_visible = (visible) => {
+    const $input = ui.form.client_secret;
+    const $button = ui.form.toggle_client_secret;
+    const $icon = $button.find('i.icon');
+
+    $input.attr('type', visible ? 'text' : 'password');
+    $icon.toggleClass('slash', !!visible);
+    $button
+        .attr('title', visible ? 'Hide client secret' : 'Show client secret')
+        .attr('aria-label', visible ? 'Hide client secret' : 'Show client secret')
+        .attr('aria-pressed', visible ? 'true' : 'false');
+};
+
+/**
+ * Enables or disables the client secret field for public-client mode.
+ * @param {boolean} is_public
+ * @param {boolean} clear_secret when becoming public, clear the secret value
+ */
+const set_public_client_mode = (is_public, clear_secret = false) => {
+    const $input = ui.form.client_secret;
+    const $toggle = ui.form.toggle_client_secret;
+    const $wrap = $input.closest('.secret-input');
+
+    ui.form.public_client.prop('checked', !!is_public);
+    $input.prop('disabled', !!is_public);
+    $toggle.prop('disabled', !!is_public);
+    $wrap.toggleClass('is-disabled', !!is_public);
+
+    if (is_public) {
+        if (clear_secret) {
+            $input.val('');
+        }
+        set_client_secret_visible(false);
+    }
+};
+
+/**
+ * Handler for the public-client checkbox.
+ * @param {Event} evt
+ */
+const handle_public_client_changed = (evt) => {
+    const is_public = ui.form.public_client.is(':checked');
+    set_public_client_mode(is_public, is_public);
+    handle_config_item_changed(evt);
+    if (!is_public) {
+        ui.form.client_secret.focus();
+    }
+};
+
+/**
+ * Toggles visibility of the client secret field.
+ * @param {Event} evt
+ */
+const handle_toggle_client_secret = (evt) => {
+    evt.preventDefault();
+    if (ui.form.client_secret.prop('disabled')) {
+        return;
+    }
+    set_client_secret_visible(ui.form.client_secret.attr('type') === 'password');
+};
+
+/**
  * Reads the current form values into a config object.
  * @returns {Object}
  */
 const read_form_values = () => {
+    const public_client = ui.form.public_client.is(':checked');
     return {
         name: ui.form.config_name.val(),
         authorize_url: ui.form.authorize_url.val(),
         token_url: ui.form.token_url.val(),
         client_id: ui.form.client_id.val(),
-        client_secret: ui.form.client_secret.val(),
+        client_secret: public_client ? '' : ui.form.client_secret.val(),
+        public_client: public_client,
         scope: ui.form.scope.val(),
     };
 };
@@ -255,18 +338,24 @@ const handle_login_button = (evt) => {
             ui.busy_overlay.hide();
             console.log(`INFO: begin_authorization success. data: `, data);
             if ('status' in data && data.status === 'ok') {
-                const authorize_url = new URL(config.authorize_url);
-                authorize_url.searchParams.set('response_type', 'code');
-                authorize_url.searchParams.set('client_id', config.client_id);
-                authorize_url.searchParams.set('redirect_uri', data.redirect_uri);
-                authorize_url.searchParams.set('state', data.state);
-                authorize_url.searchParams.set('code_challenge', data.code_challenge);
-                authorize_url.searchParams.set('code_challenge_method', data.code_challenge_method);
+                // Build the query string with encodeURIComponent so every value —
+                // including redirect_uri — is consistently percent-encoded.
+                // (URLSearchParams is fine too, but this makes the encoding explicit.)
+                const params = [
+                    `response_type=${encodeURIComponent('code')}`,
+                    `client_id=${encodeURIComponent(config.client_id)}`,
+                    `redirect_uri=${encodeURIComponent(data.redirect_uri)}`,
+                    `state=${encodeURIComponent(data.state)}`,
+                    `code_challenge=${encodeURIComponent(data.code_challenge)}`,
+                    `code_challenge_method=${encodeURIComponent(data.code_challenge_method)}`,
+                ];
                 if (config.scope) {
-                    authorize_url.searchParams.set('scope', config.scope);
+                    params.push(`scope=${encodeURIComponent(config.scope)}`);
                 }
-                console.log(`DEBUG: redirect url: ${authorize_url.toString()}`);
-                window.location.assign(authorize_url.toString());
+                const separator = config.authorize_url.includes('?') ? '&' : '?';
+                const authorize_url = `${config.authorize_url}${separator}${params.join('&')}`;
+                console.log(`DEBUG: redirect url: ${authorize_url}`);
+                window.location.assign(authorize_url);
             } else {
                 let error = data.message ? data.message : 'unknown error';
                 set_response_area(`Couldn't begin the authorization flow! err = ${error}`);
@@ -426,7 +515,7 @@ const handle_form_submit = (evt) => {
         save_config(config);
         ui.login_button.show();
     } else {
-        show_save_status('All fields except scope are required', true);
+        show_save_status('Name, URLs, and Client ID are required (plus Client Secret unless Public client)', true);
     }
 };
 
@@ -444,7 +533,7 @@ const load_config_list_values = () => {
     }
 
     $.each(config_list, (idx, val) => {
-        const $text = $(`<div class='config-list-item-text'></div>`).text(val);
+        const $text = $(`<div class='config-list-item-text'></div>`).text(val).attr('title', val);
         const $clone = $(
             `<div class='config-list-item-icon config-list-item-clone' title='Clone'><i class="copy icon"></i></div>`
         );
@@ -578,6 +667,7 @@ const begin_clone_from_current = () => {
         token_url: source.token_url || '',
         client_id: source.client_id || '',
         client_secret: source.client_secret || '',
+        public_client: source.public_client === true || !source.client_secret,
         scope: source.scope || '',
     };
 
@@ -604,7 +694,7 @@ const save_config = (config) => {
         authorize_url: config.authorize_url,
         token_url: config.token_url,
         client_id: config.client_id,
-        client_secret: config.client_secret,
+        client_secret: config.client_secret || '',
         scope: config.scope,
     };
 
@@ -719,6 +809,10 @@ const populate_setup_dialog = () => {
     ui.form.client_id.val(config.client_id || '');
     ui.form.client_secret.val(config.client_secret || '');
     ui.form.scope.val(config.scope || '');
+    // Explicit flag wins; otherwise infer public client from a saved row with no secret.
+    const is_public = config.public_client === true || (!!config.id && !config.client_secret);
+    set_public_client_mode(is_public, false);
+    set_client_secret_visible(false);
 };
 
 /**
@@ -813,6 +907,8 @@ const process_startup_data = (data) => {
 
         if (data.config) {
             config = data.config;
+            // Persisted public clients have an empty secret; surface that as a UI flag.
+            config.public_client = !config.client_secret;
             // Check to see if the stored config name still the current config.
             // If not, update it.
             const config_name = get_current_config();

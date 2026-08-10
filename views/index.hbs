@@ -78,7 +78,18 @@
                     </div>
                     <div class='field-row'>
                         <label for='client_secret_input'>Client Secret</label>
-                        <input type='text' id='client_secret_input' name='client_secret_input' placeholder='client secret' autocomplete='off' />
+                        <div class='secret-field'>
+                            <div class='secret-input'>
+                                <input type='password' id='client_secret_input' name='client_secret_input' placeholder='client secret' autocomplete='off' />
+                                <button type='button' id='toggle_client_secret' class='secret-toggle' title='Show client secret' aria-label='Show client secret' aria-pressed='false'>
+                                    <i class='eye icon'></i>
+                                </button>
+                            </div>
+                            <label class='checkbox-label' for='public_client_input'>
+                                <input type='checkbox' id='public_client_input' name='public_client_input' />
+                                <span>Public client — no client secret (PKCE only)</span>
+                            </label>
+                        </div>
                     </div>
                     <div class='field-row'>
                         <label for='scope_input'>Scope <span class='optional'>(optional)</span></label>
