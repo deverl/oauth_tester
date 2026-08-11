@@ -36,6 +36,36 @@ Use a public-client configuration when the authorization server has no pre-regis
 
 `npm start` / `yarn start` runs the app under [nodemon](https://nodemon.io/), which restarts the server when server-side files change (`app.js`, `bin/`, `routes/`, `server/`, `constants/`, `views/`). Static files under `public/` are picked up with a browser refresh. Use `npm run start:plain` if you want a one-shot `node` process without file watching.
 
+### Verbose OAuth logging
+
+To debug traffic with the authorization server, enable verbose logging. When on, the server prints full request/response details to the console for:
+
+-   The authorize URL the browser will open (method, URL, query params) — built server-side before redirect
+-   The callback to `oauth_handler` (code/state or error query params)
+-   Token endpoint POSTs for code exchange and refresh (headers, form params, raw body, status, response body)
+
+Payloads are logged as-is, including secrets. Use this only on a local machine.
+
+Enable it with any of:
+
+```bash
+npm run start:verbose
+VERBOSITY=1 npm start
+npm start -- --verbose
+npm start -- -v
+```
+
+Or without nodemon:
+
+```bash
+VERBOSITY=1 npm run start:plain
+npm run start:plain -- --verbose
+```
+
+`VERBOSITY` is on for values such as `1`, `true`, `yes`, `on`, or `debug`, and off when unset or set to `0`, `false`, `no`, or `off`. On startup you should see `Verbose OAuth logging enabled`; authorize/token traffic is then prefixed with `[oauth] >>>` / `[oauth] <<<`.
+
+Note: `client_secret` appears on token requests for confidential clients, not on the authorize redirect (that is browser-visible and must not carry the secret).
+
 ### Browser
 
 -   Browse to [http://localhost:4000](http://localhost:4000)

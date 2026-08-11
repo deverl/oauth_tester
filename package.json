@@ -3,9 +3,10 @@
     "version": "1.2.2",
     "private": true,
     "scripts": {
-        "start": "nodemon ./bin/www",
+        "start": "nodemon ./bin/www --",
+        "start:verbose": "VERBOSITY=1 nodemon ./bin/www --",
         "start:plain": "node ./bin/www",
-        "start_debug": "DEBUG=oauth-test:* nodemon ./bin/www"
+        "start_debug": "DEBUG=oauth-test:* nodemon ./bin/www --"
     },
     "dependencies": {
         "better-sqlite3": "^13.0.3",

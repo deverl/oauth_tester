@@ -1,11 +1,49 @@
 const db = require('./db');
 const constants = require('../constants/constants');
+const { is_verbose } = require('./verbosity');
 
 /**
  * The redirect_uri registered with the authorization server. It must be identical
  * in the authorization request and the token request (RFC 6749 section 4.1.3).
  */
 const REDIRECT_URI = `http://localhost:${constants.HTTP_PORT}/api/v1/oauth_handler/`;
+
+/**
+ * Format headers for verbose logging (Headers object or plain object).
+ * @param {Headers|Object} headers
+ * @returns {string}
+ */
+const format_headers = (headers) => {
+    if (!headers) {
+        return '(none)';
+    }
+    if (typeof headers.forEach === 'function') {
+        const lines = [];
+        headers.forEach((value, key) => {
+            lines.push(`${key}: ${value}`);
+        });
+        return lines.length ? lines.join('\n') : '(none)';
+    }
+    return Object.entries(headers)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('\n');
+};
+
+/**
+ * Try to pretty-print a body as JSON; otherwise return the raw string.
+ * @param {string} body
+ * @returns {string}
+ */
+const format_body = (body) => {
+    if (body == null || body === '') {
+        return '(empty)';
+    }
+    try {
+        return JSON.stringify(JSON.parse(body), null, 2);
+    } catch (e) {
+        return body;
+    }
+};
 
 /**
  * POSTs a form-encoded request to the token endpoint and returns the parsed JSON body.
@@ -16,21 +54,68 @@ const REDIRECT_URI = `http://localhost:${constants.HTTP_PORT}/api/v1/oauth_handl
 const token_request = async (token_url, params) => {
     console.log(`DEBUG: (token_request) Posting request to '${token_url}'`);
 
+    const headers = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Accept: 'application/json',
+    };
+    const body_string = new URLSearchParams(params).toString();
+
+    if (is_verbose()) {
+        console.log(
+            [
+                '[oauth] >>> request to authorization server',
+                `POST ${token_url}`,
+                format_headers(headers),
+                `Content-Length: ${Buffer.byteLength(body_string)}`,
+                '',
+                '--- form params ---',
+                JSON.stringify(params, null, 2),
+                '--- raw POST body ---',
+                body_string || '(empty)',
+                '[oauth] >>> end request',
+            ].join('\n')
+        );
+    }
+
     let response;
     try {
         response = await fetch(token_url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                Accept: 'application/json',
-            },
-            body: new URLSearchParams(params).toString(),
+            headers,
+            body: body_string,
         });
     } catch (e) {
+        if (is_verbose()) {
+            console.error(
+                [
+                    '[oauth] !!! request failed (network/DNS/TLS)',
+                    `POST ${token_url}`,
+                    `error: ${e.message || String(e)}`,
+                    e.cause ? `cause: ${e.cause.message || String(e.cause)}` : null,
+                ]
+                    .filter(Boolean)
+                    .join('\n')
+            );
+        }
         throw new Error(`Token request to ${token_url} failed: ${e.message || e}`);
     }
 
     const body = await response.text();
+
+    if (is_verbose()) {
+        console.log(
+            [
+                '[oauth] <<< response from authorization server',
+                `HTTP ${response.status} ${response.statusText || ''}`.trim(),
+                `url: ${response.url || token_url}`,
+                format_headers(response.headers),
+                '',
+                '--- response body ---',
+                format_body(body),
+                '[oauth] <<< end response',
+            ].join('\n')
+        );
+    }
 
     let json;
     try {
@@ -50,6 +135,79 @@ const token_request = async (token_url, params) => {
     }
 
     return json;
+};
+
+/**
+ * Builds the authorization endpoint URL for a browser redirect (RFC 6749 §4.1.1 + PKCE).
+ * When verbose logging is on, logs the GET as an outbound auth-server request.
+ * (The browser performs the navigation; this app does not fetch the authorize URL itself.)
+ *
+ * @param {Object} config
+ * @param {{ state: string, code_challenge: string, code_challenge_method?: string }} opts
+ * @returns {string}
+ */
+const build_authorize_url = (config, { state, code_challenge, code_challenge_method = 'S256' }) => {
+    if (!config || !config.authorize_url) {
+        throw new Error('Invalid config (no authorize_url)');
+    }
+
+    const params = {
+        response_type: 'code',
+        client_id: config.client_id,
+        redirect_uri: REDIRECT_URI,
+        state,
+        code_challenge,
+        code_challenge_method,
+    };
+
+    if (config.scope) {
+        params.scope = config.scope;
+    }
+
+    const query = Object.entries(params)
+        .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+        .join('&');
+    const separator = config.authorize_url.includes('?') ? '&' : '?';
+    const authorize_url = `${config.authorize_url}${separator}${query}`;
+
+    if (is_verbose()) {
+        console.log(
+            [
+                '[oauth] >>> request to authorization server (browser redirect)',
+                `GET ${authorize_url}`,
+                '(no request headers or body — browser navigation)',
+                '',
+                '--- query params ---',
+                JSON.stringify(params, null, 2),
+                '[oauth] >>> end request',
+            ].join('\n')
+        );
+    }
+
+    return authorize_url;
+};
+
+/**
+ * Logs the authorization server's redirect back to our redirect_uri (verbose mode).
+ * @param {Object} query  Express req.query (code/state or error fields)
+ */
+const log_authorize_callback = (query) => {
+    if (!is_verbose()) {
+        return;
+    }
+
+    const qs = new URLSearchParams(query).toString();
+    console.log(
+        [
+            '[oauth] <<< response from authorization server (redirect to redirect_uri)',
+            `GET ${REDIRECT_URI}${qs ? `?${qs}` : ''}`,
+            '(browser redirected here after /authorize)',
+            '',
+            '--- query params ---',
+            JSON.stringify(query, null, 2),
+            '[oauth] <<< end response',
+        ].join('\n')
+    );
 };
 
 /**
@@ -147,6 +305,8 @@ const refresh_token = async (config) => {
 
 module.exports = {
     REDIRECT_URI,
+    build_authorize_url,
+    log_authorize_callback,
     get_token,
     refresh_token,
 };

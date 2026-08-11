@@ -159,14 +159,22 @@ router.post('/delete_token', (req, res, next) => {
  * - a cryptographically random `state` (CSRF protection, RFC 6749 section 10.12)
  * - a PKCE code verifier / S256 code challenge pair (RFC 7636)
  *
- * Responds with the state and code challenge so the browser can build the
- * authorization request.
+ * Builds the authorize URL on the server (so it can be logged) and returns it
+ * for the browser to navigate to.
  */
 router.post('/begin_authorization', (req, res, next) => {
     let o,
         body = req.body;
 
     if (body.config_name) {
+        const config = db.read_config(body.config_name);
+        if (!config) {
+            res.status(400);
+            o = { status: 'fail', message: 'No config found' };
+            res.send(o);
+            return;
+        }
+
         const state = crypto.randomBytes(24).toString('base64url');
         const verifier = crypto.randomBytes(32).toString('base64url');
         const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
@@ -175,12 +183,19 @@ router.post('/begin_authorization', (req, res, next) => {
         const verifier_id = db.save_verifier(body.config_name, verifier);
 
         if (state_id && verifier_id) {
+            const authorize_url = oauth.build_authorize_url(config, {
+                state,
+                code_challenge: challenge,
+                code_challenge_method: 'S256',
+            });
+
             o = load_startup_data(body.config_name);
             o.status = 'ok';
             o.state = state;
             o.code_challenge = challenge;
             o.code_challenge_method = 'S256';
             o.redirect_uri = oauth.REDIRECT_URI;
+            o.authorize_url = authorize_url;
         } else {
             o = { status: 'fail', message: 'DB Failure' };
         }
@@ -198,6 +213,8 @@ router.post('/begin_authorization', (req, res, next) => {
  * server (RFC 6749 section 4.1.2).
  */
 router.get('/oauth_handler', (req, res, next) => {
+    oauth.log_authorize_callback(req.query);
+
     if (req.query.error) {
         const description = req.query.error_description ? `: ${req.query.error_description}` : '';
         const message = `${req.query.error}${description}`;

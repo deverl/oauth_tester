@@ -335,22 +335,11 @@ const handle_login_button = (evt) => {
             ui.busy_overlay.hide();
             console.log(`INFO: begin_authorization success. data: `, data);
             if ('status' in data && data.status === 'ok') {
-                // Build the query string with encodeURIComponent so every value —
-                // including redirect_uri — is consistently percent-encoded.
-                // (URLSearchParams is fine too, but this makes the encoding explicit.)
-                const params = [
-                    `response_type=${encodeURIComponent('code')}`,
-                    `client_id=${encodeURIComponent(config.client_id)}`,
-                    `redirect_uri=${encodeURIComponent(data.redirect_uri)}`,
-                    `state=${encodeURIComponent(data.state)}`,
-                    `code_challenge=${encodeURIComponent(data.code_challenge)}`,
-                    `code_challenge_method=${encodeURIComponent(data.code_challenge_method)}`,
-                ];
-                if (config.scope) {
-                    params.push(`scope=${encodeURIComponent(config.scope)}`);
+                const authorize_url = data.authorize_url;
+                if (!authorize_url) {
+                    set_response_area("Couldn't begin the authorization flow! err = missing authorize_url");
+                    return;
                 }
-                const separator = config.authorize_url.includes('?') ? '&' : '?';
-                const authorize_url = `${config.authorize_url}${separator}${params.join('&')}`;
                 console.log(`DEBUG: redirect url: ${authorize_url}`);
                 window.location.assign(authorize_url);
             } else {

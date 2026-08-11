@@ -9,6 +9,12 @@ const debug = require('debug')('oauth-test:server');
 const http = require('http');
 const utils = require('../server/utils');
 const constants = require('../constants/constants');
+const { init_verbosity, is_verbose } = require('../server/verbosity');
+
+init_verbosity();
+if (is_verbose()) {
+    console.log('Verbose OAuth logging enabled');
+}
 
 /**
  * Normalize a port into a number, string, or false.
