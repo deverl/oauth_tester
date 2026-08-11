@@ -98,7 +98,11 @@
 
                     <div class='button-row'>
                         <span id='save_status' class='save-status' aria-live='polite'></span>
-                        <input type='submit' id='form_submit_button' value='Save' class='ui primary button' />
+                        <div class='dialog-actions'>
+                            <button type='button' id='settings_cancel_button' class='ui button'>Cancel</button>
+                            <button type='button' id='settings_apply_button' class='ui button' disabled>Apply</button>
+                            <button type='submit' id='settings_ok_button' class='ui primary button'>OK</button>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -70,7 +70,7 @@ Note: `client_secret` appears on token requests for confidential clients, not on
 
 -   Browse to [http://localhost:4000](http://localhost:4000)
 -   Enter a name for the configuration, the authorize URL, the token URL, the client_id, and either a client_secret or enable **Public client** for PKCE-only
--   Optionally set a scope, then press **Save**
+-   Optionally set a scope, then press **Apply** (keeps Settings open) or **OK** (saves and closes)
 -   You can then begin to use the oauth_test application
 
 ### Development Environment
@@ -95,7 +95,7 @@ The first time you open the app, you will be presented with a settings dialog as
 -   **Public client — no client secret (PKCE only)** — when checked, the config can be saved without a client secret, and token/refresh calls omit `client_secret`
 -   **Scope** (optional) — space-separated scopes to request
 
-Enter these values and press **Save**. Save keeps the dialog open and sets the configuration as current; close with the **X** (or Escape) when you are done.
+Enter these values and press **Apply** to save while keeping Settings open, or **OK** to save and close. **Cancel** (or the **X** / Escape) closes without saving; if you have unsaved edits you will be asked to confirm.
 
 From Settings you can also:
 

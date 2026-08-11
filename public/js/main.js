@@ -14,6 +14,12 @@ let config = EMPTY_CONFIG;
 
 let config_list = [];
 
+/** Snapshot of form fields after last load/Apply; used for dirty detection. */
+let settings_baseline = null;
+
+/** True for New/Clone drafts that exist only in the form until Apply/OK. */
+let settings_unsaved_draft = false;
+
 let ui = {
     response_area: null,
     login_button: null,
@@ -50,10 +56,12 @@ $(document).ready(() => {
     ui.form.toggle_client_secret = $('#toggle_client_secret');
     ui.form.public_client = $('#public_client_input');
     ui.form.scope = $('#scope_input');
-    ui.form.submit_button = $('#form_submit_button');
+    ui.form.cancel_button = $('#settings_cancel_button');
+    ui.form.apply_button = $('#settings_apply_button');
+    ui.form.ok_button = $('#settings_ok_button');
     ui.form.save_status = $('#save_status');
 
-    ui.form.submit_button.prop('disabled', true);
+    ui.form.apply_button.prop('disabled', true);
     ui.form.clone_config_button.prop('disabled', true);
     ui.form.toggle_client_secret.on('click', handle_toggle_client_secret);
     ui.form.public_client.on('change', handle_public_client_changed);
@@ -66,16 +74,19 @@ $(document).ready(() => {
     $('form#oauth_config_form').on('submit', (evt) => {
         evt.stopPropagation();
         evt.preventDefault();
-        handle_form_submit(evt);
+        handle_settings_ok(evt);
     });
 
+    ui.form.apply_button.on('click', handle_settings_apply);
+    ui.form.cancel_button.on('click', handle_settings_cancel);
+
     ui.form.close_x.click((evt) => {
-        hide_setup_dialog();
+        handle_settings_cancel(evt);
     });
 
     $(document).on('keydown', (evt) => {
         if (evt.key === 'Escape' && ui.dialog.hasClass('is-open')) {
-            hide_setup_dialog();
+            handle_settings_cancel(evt);
         }
     });
 
@@ -107,18 +118,68 @@ const has_cloneable_values = (cfg) => {
 };
 
 /**
- * Checks to see if we have values for all required fields, and enables the submit button if so.
+ * Checks required fields / dirty state and updates Apply + Clone button enablement.
  */
 const handle_config_item_changed = (evt) => {
     const form_config = read_form_values();
 
-    ui.form.submit_button.prop('disabled', !is_config_complete(form_config));
+    ui.form.apply_button.prop('disabled', !is_config_complete(form_config) || !is_settings_dirty());
     ui.form.clone_config_button.prop('disabled', !has_cloneable_values(form_config));
 
     // Only clear status for real user edits (keyup/change/paste), not programmatic refreshes.
     if (evt) {
         clear_save_status();
     }
+};
+
+/**
+ * Normalized form snapshot for dirty comparison.
+ * @param {Object} cfg
+ * @returns {Object}
+ */
+const settings_snapshot = (cfg) => {
+    const public_client = !!(cfg && cfg.public_client);
+    return {
+        name: (cfg && cfg.name) || '',
+        authorize_url: (cfg && cfg.authorize_url) || '',
+        token_url: (cfg && cfg.token_url) || '',
+        client_id: (cfg && cfg.client_id) || '',
+        client_secret: public_client ? '' : (cfg && cfg.client_secret) || '',
+        public_client: public_client,
+        scope: (cfg && cfg.scope) || '',
+    };
+};
+
+/**
+ * Records the current form as the clean baseline (after load or successful Apply).
+ */
+const capture_settings_baseline = () => {
+    settings_baseline = settings_snapshot(read_form_values());
+    settings_unsaved_draft = false;
+};
+
+/**
+ * @returns {boolean}
+ */
+const is_settings_dirty = () => {
+    if (settings_unsaved_draft) {
+        return true;
+    }
+    if (!settings_baseline) {
+        return false;
+    }
+    return JSON.stringify(settings_snapshot(read_form_values())) !== JSON.stringify(settings_baseline);
+};
+
+/**
+ * Confirm before discarding unsaved settings edits.
+ * @returns {boolean} true if it is OK to proceed (discard or nothing to lose)
+ */
+const confirm_discard_settings = () => {
+    if (!is_settings_dirty()) {
+        return true;
+    }
+    return confirm('You have unsaved changes. Discard them?');
 };
 
 /**
@@ -140,7 +201,7 @@ const unique_copy_name = (base_name) => {
 };
 
 /**
- * Shows a short-lived status message next to Save.
+ * Shows a short-lived status message next to the dialog actions.
  * @param {string} message
  * @param {boolean} is_error
  */
@@ -164,7 +225,7 @@ const show_save_status = (message, is_error = false) => {
 };
 
 /**
- * Clears the Save status message.
+ * Clears the settings status message.
  */
 const clear_save_status = () => {
     if (!ui.form.save_status) {
@@ -484,25 +545,81 @@ const handle_request_token = (evt) => {
 };
 
 /**
- * Verifies that the required fields are present, and if so saves them as the current config.
- * Leaves the settings dialog open so the user can keep editing or close with X.
- * @param {Event} evt
+ * Persists the current form as the active configuration (Apply).
+ * Leaves the settings dialog open.
+ * @param {Event} [evt]
+ * @returns {Promise<boolean>} resolves true on success
  */
-const handle_form_submit = (evt) => {
-    const form_config = read_form_values();
-    console.log('INFO handle_form_submit, config: ', form_config);
-    if (is_config_complete(form_config)) {
-        // Keep id when editing/renaming an existing row. Clones and New drafts have no id.
-        const next_config = Object.assign({}, form_config);
-        if (config && config.id) {
-            next_config.id = config.id;
-        }
-        config = next_config;
-        save_config(config);
-        ui.login_button.show();
-    } else {
-        show_save_status('Name, URLs, and Client ID are required (plus Client Secret unless Public client)', true);
+const handle_settings_apply = (evt) => {
+    if (evt) {
+        evt.preventDefault();
     }
+    return persist_settings_form({ close_on_success: false });
+};
+
+/**
+ * Saves if dirty (when there is something to save), then closes. Enter submits here.
+ * @param {Event} [evt]
+ * @returns {Promise<boolean>}
+ */
+const handle_settings_ok = (evt) => {
+    if (evt) {
+        evt.preventDefault();
+    }
+
+    if (!is_settings_dirty()) {
+        hide_setup_dialog();
+        return Promise.resolve(true);
+    }
+
+    return persist_settings_form({ close_on_success: true });
+};
+
+/**
+ * Closes without saving; confirms when the form is dirty.
+ * @param {Event} [evt]
+ */
+const handle_settings_cancel = (evt) => {
+    if (evt) {
+        evt.preventDefault();
+    }
+    if (!confirm_discard_settings()) {
+        return;
+    }
+    hide_setup_dialog();
+};
+
+/**
+ * Validates and saves the settings form.
+ * @param {{ close_on_success?: boolean }} [opts]
+ * @returns {Promise<boolean>}
+ */
+const persist_settings_form = ({ close_on_success = false } = {}) => {
+    const form_config = read_form_values();
+    console.log('INFO persist_settings_form, config: ', form_config);
+
+    if (!is_config_complete(form_config)) {
+        show_save_status('Name, URLs, and Client ID are required (plus Client Secret unless Public client)', true);
+        return Promise.resolve(false);
+    }
+
+    const next_config = Object.assign({}, form_config);
+    if (config && config.id && !settings_unsaved_draft) {
+        next_config.id = config.id;
+    }
+    config = next_config;
+
+    return save_config(config).then((ok) => {
+        if (ok) {
+            ui.login_button.show();
+            capture_settings_baseline();
+            handle_config_item_changed();
+            if (close_on_success) {
+                hide_setup_dialog();
+            }
+        }
+        return ok;
+    });
 };
 
 /**
@@ -513,7 +630,7 @@ const load_config_list_values = () => {
 
     if (!config_list.length) {
         ui.form.config_list.append(
-            $(`<div class='config-list-empty'>No configurations yet. Use New or fill in the form and Save.</div>`)
+            $(`<div class='config-list-empty'>No configurations yet. Use New or fill in the form and Apply / OK.</div>`)
         );
         return;
     }
@@ -555,10 +672,17 @@ const handle_config_list_item_name_clicked = (evt) => {
     const $e = $(evt.currentTarget);
     const config_name = $e.attr('data-config-name');
     if (config_name) {
+        if (config_name === config.name && !settings_unsaved_draft && !is_settings_dirty()) {
+            return;
+        }
+        if (!confirm_discard_settings()) {
+            return;
+        }
         set_current_config(config_name);
         get_startup_data(config_name).then((data) => {
             // Startup data has already been copied into global data.
             populate_setup_dialog();
+            capture_settings_baseline();
             handle_config_item_changed();
         });
     }
@@ -605,6 +729,10 @@ const handle_clone_from_list_clicked = (evt) => {
         return;
     }
 
+    if (!confirm_discard_settings()) {
+        return;
+    }
+
     get_startup_data(config_name).then(() => {
         begin_clone_from_current();
     });
@@ -616,11 +744,15 @@ const handle_clone_from_list_clicked = (evt) => {
  */
 const handle_new_config_clicked = (evt) => {
     console.log('Add new config clicked');
+    if (!confirm_discard_settings()) {
+        return;
+    }
     config = Object.assign({}, EMPTY_CONFIG);
     clear_current_config();
     populate_setup_dialog();
     clear_response_area();
     clear_save_status();
+    capture_settings_baseline();
     handle_config_item_changed();
     ui.form.config_name.focus();
 };
@@ -658,20 +790,24 @@ const begin_clone_from_current = () => {
     };
 
     clear_current_config();
+    settings_unsaved_draft = true;
     populate_setup_dialog();
     clear_response_area();
+    capture_settings_baseline();
+    settings_unsaved_draft = true;
     handle_config_item_changed();
-    show_save_status('Cloned — rename and Save');
+    show_save_status('Cloned — rename and Apply / OK');
     ui.form.config_name.focus().select();
 };
 
 /**
  * Saves the config on the server.
  * @param {Object} config
+ * @returns {Promise<boolean>} true when the server reports success
  */
 const save_config = (config) => {
     set_current_config(config.name);
-    ui.form.submit_button.prop('disabled', true);
+    ui.form.apply_button.prop('disabled', true);
 
     const url = `${API_BASE_URL}/v1/save_config`;
 
@@ -694,27 +830,31 @@ const save_config = (config) => {
         dataType: 'json',
     };
 
-    $.ajax(url, opts)
-        .then((data, textStatus, jqXHR) => {
+    return $.ajax(url, opts).then(
+        (data) => {
             console.log('INFO: save_config success');
             process_startup_data(data);
-            handle_config_item_changed();
             if (data.status) {
                 if (data.status === 'ok') {
                     console.log('Successfully saved the config on the server.');
                     show_save_status('Saved');
-                } else {
-                    show_save_status('Failed to save', true);
+                    return true;
                 }
-            } else {
-                show_save_status('Invalid server response', true);
+                show_save_status('Failed to save', true);
+                handle_config_item_changed();
+                return false;
             }
-        })
-        .fail((jqXHR, textStatus, errorThrown) => {
+            show_save_status('Invalid server response', true);
+            handle_config_item_changed();
+            return false;
+        },
+        () => {
             console.log('ERROR: save_config failed');
             handle_config_item_changed();
             show_save_status('Failed to save', true);
-        });
+            return false;
+        }
+    );
 };
 
 /**
@@ -767,6 +907,7 @@ const handle_setup = (evt) => {
  */
 const show_setup_dialog = () => {
     populate_setup_dialog();
+    capture_settings_baseline();
     handle_config_item_changed();
     clear_save_status();
     ui.overlay.show();
