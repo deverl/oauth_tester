@@ -26,6 +26,9 @@
     <div class='button' id='delete_token_button' style='display: none;'>
         Delete token
     </div>
+    <div class='button' id='verify_button' style='display: none;'>
+        Verify
+    </div>
 </div>
 
 <div>
@@ -94,6 +97,10 @@
                     <div class='field-row'>
                         <label for='scope_input'>Scope <span class='optional'>(optional)</span></label>
                         <input type='text' id='scope_input' name='scope_input' placeholder='space-separated scopes' autocomplete='off' />
+                    </div>
+                    <div class='field-row'>
+                        <label for='verify_url_input'>Verify URL <span class='optional'>(optional)</span></label>
+                        <input type='text' id='verify_url_input' name='verify_url_input' placeholder='https://yourhost.com/api/me' autocomplete='off' />
                     </div>
 
                     <div class='button-row'>

@@ -60,6 +60,7 @@ router.post('/save_config', (req, res, next) => {
         body.authorize_url = ensure_scheme(body.authorize_url);
         body.token_url = ensure_scheme(body.token_url);
         body.client_secret = body.client_secret || '';
+        body.verify_url = body.verify_url ? ensure_scheme(body.verify_url) : '';
         body.id = utils.force_int(body.id);
         const id = db.save_config(body);
         if (id) {
@@ -296,6 +297,47 @@ router.post('/refresh_token', (req, res, next) => {
             .then((token) => {
                 o = load_startup_data(config_name);
                 o.status = 'ok';
+                res.send(o);
+            })
+            .catch((err) => {
+                res.status(400);
+                o = { status: 'fail', message: `API failure: ${err.message || err}` };
+                res.send(o);
+            });
+    } else {
+        res.status(400);
+        o = { status: 'fail', message: 'Invalid request' };
+        res.send(o);
+    }
+});
+
+/**
+ * Handler for the verify end point.
+ * Proxies a GET to the config's verify_url with the stored access token as Bearer.
+ */
+router.post('/verify', (req, res, next) => {
+    let o,
+        body = req.body;
+
+    if (body.config_name) {
+        const config_name = body.config_name;
+        const config = db.read_config(config_name);
+
+        if (!config) {
+            res.status(400);
+            res.send({ status: 'fail', message: 'No config found' });
+            return;
+        }
+
+        oauth
+            .verify_access(config)
+            .then((result) => {
+                o = {
+                    status: 'ok',
+                    http_status: result.http_status,
+                    http_status_text: result.http_status_text,
+                    body: result.body,
+                };
                 res.send(o);
             })
             .catch((err) => {

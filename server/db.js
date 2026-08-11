@@ -16,7 +16,8 @@ const CONFIG_TABLE_SQL = `CREATE TABLE IF NOT EXISTS
             token_url TEXT NOT NULL,
             client_id TEXT NOT NULL,
             client_secret TEXT NOT NULL,
-            scope TEXT NOT NULL DEFAULT ''
+            scope TEXT NOT NULL DEFAULT '',
+            verify_url TEXT NOT NULL DEFAULT ''
     )`;
 
 const PROPS_TABLE_SQL = `CREATE TABLE IF NOT EXISTS
@@ -84,6 +85,21 @@ const migrate_legacy_schema = () => {
     }
 };
 
+/**
+ * Adds newer optional columns that CREATE TABLE IF NOT EXISTS will not add
+ * to an already-existing config table.
+ */
+const migrate_config_columns = () => {
+    const database = get_db();
+    const columns = database.prepare(`PRAGMA table_info(config)`).all();
+    const column_names = new Set(columns.map((col) => col.name));
+
+    if (!column_names.has('verify_url')) {
+        console.log('INFO: (migrate_config_columns) Adding verify_url column to config');
+        database.exec(`ALTER TABLE config ADD COLUMN verify_url TEXT NOT NULL DEFAULT ''`);
+    }
+};
+
 const init = () => {
     try {
         if (!db) {
@@ -94,6 +110,7 @@ const init = () => {
 
         const database = get_db();
         database.prepare(CONFIG_TABLE_SQL).run();
+        migrate_config_columns();
         database.prepare(`CREATE INDEX IF NOT EXISTS config_name_idx ON config (name)`).run();
 
         database.prepare(PROPS_TABLE_SQL).run();
@@ -453,6 +470,7 @@ const save_config = (config) => {
     // Empty string is valid for public clients (PKCE only, no client secret).
     const client_secret = config.client_secret || '';
     const scope = config.scope || '';
+    const verify_url = config.verify_url || '';
 
     if (!(name && authorize_url && token_url && client_id)) {
         console.error('ERROR: (save_config) Invalid request, missing or empty parameters');
@@ -471,16 +489,16 @@ const save_config = (config) => {
     try {
         if (id) {
             const q = get_db().prepare(
-                `UPDATE config SET name = ?, authorize_url = ?, token_url = ?, client_id = ?, client_secret = ?, scope = ? WHERE id = ?`
+                `UPDATE config SET name = ?, authorize_url = ?, token_url = ?, client_id = ?, client_secret = ?, scope = ?, verify_url = ? WHERE id = ?`
             );
-            const info = q.run(name, authorize_url, token_url, client_id, client_secret, scope, id);
+            const info = q.run(name, authorize_url, token_url, client_id, client_secret, scope, verify_url, id);
             return info.changes ? id : null;
         }
 
         const q = get_db().prepare(
-            `INSERT INTO config (name, authorize_url, token_url, client_id, client_secret, scope) VALUES (?, ?, ?, ?, ?, ?)`
+            `INSERT INTO config (name, authorize_url, token_url, client_id, client_secret, scope, verify_url) VALUES (?, ?, ?, ?, ?, ?, ?)`
         );
-        const info = q.run(name, authorize_url, token_url, client_id, client_secret, scope);
+        const info = q.run(name, authorize_url, token_url, client_id, client_secret, scope, verify_url);
         return info.lastInsertRowid || null;
     } catch (e) {
         console.error(`ERROR: (save_config) Exception: ${e}`);

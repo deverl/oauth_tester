@@ -303,10 +303,91 @@ const refresh_token = async (config) => {
     return token;
 };
 
+/**
+ * GETs the configured verification URL with the stored access token as a Bearer token.
+ * @param {Object} config
+ * @returns {Promise<{http_status: number, http_status_text: string, body: string}>}
+ */
+const verify_access = async (config) => {
+    if (!config || !config.verify_url) {
+        throw new Error('Invalid config (no verify_url)');
+    }
+
+    const token_wrapper = db.read_token(config.name);
+
+    if (!token_wrapper || !token_wrapper.token) {
+        throw new Error('No token data');
+    }
+
+    const access_token = token_wrapper.token.access_token;
+    if (!access_token) {
+        throw new Error('No access token');
+    }
+
+    const headers = {
+        Authorization: `Bearer ${access_token}`,
+        Accept: 'application/json',
+    };
+
+    if (is_verbose()) {
+        console.log(
+            [
+                '[oauth] >>> verify request',
+                `GET ${config.verify_url}`,
+                format_headers(headers),
+                '[oauth] >>> end request',
+            ].join('\n')
+        );
+    }
+
+    let response;
+    try {
+        response = await fetch(config.verify_url, {
+            method: 'GET',
+            headers,
+        });
+    } catch (e) {
+        if (is_verbose()) {
+            console.error(
+                [
+                    '[oauth] !!! verify request failed (network/DNS/TLS)',
+                    `GET ${config.verify_url}`,
+                    `error: ${e.message || String(e)}`,
+                ].join('\n')
+            );
+        }
+        throw new Error(`Verify request to ${config.verify_url} failed: ${e.message || e}`);
+    }
+
+    const body = await response.text();
+
+    if (is_verbose()) {
+        console.log(
+            [
+                '[oauth] <<< verify response',
+                `HTTP ${response.status} ${response.statusText || ''}`.trim(),
+                `url: ${response.url || config.verify_url}`,
+                format_headers(response.headers),
+                '',
+                '--- response body ---',
+                format_body(body),
+                '[oauth] <<< end response',
+            ].join('\n')
+        );
+    }
+
+    return {
+        http_status: response.status,
+        http_status_text: response.statusText || '',
+        body: body,
+    };
+};
+
 module.exports = {
     REDIRECT_URI,
     build_authorize_url,
     log_authorize_callback,
     get_token,
     refresh_token,
+    verify_access,
 };

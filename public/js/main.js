@@ -8,6 +8,7 @@ const EMPTY_CONFIG = {
     client_secret: '',
     public_client: false,
     scope: '',
+    verify_url: '',
 };
 
 let config = EMPTY_CONFIG;
@@ -26,6 +27,7 @@ let ui = {
     refresh_token_button: null,
     request_token_button: null,
     delete_token_button: null,
+    verify_button: null,
     overlay: null,
     busy_overlay: null,
 };
@@ -37,6 +39,7 @@ $(document).ready(() => {
     ui.refresh_token_button = $('#refresh_token_button');
     ui.request_token_button = $('#request_token');
     ui.delete_token_button = $('#delete_token_button');
+    ui.verify_button = $('#verify_button');
     ui.setup_button = $('#setup_button');
 
     ui.overlay = $('#overlay');
@@ -56,6 +59,7 @@ $(document).ready(() => {
     ui.form.toggle_client_secret = $('#toggle_client_secret');
     ui.form.public_client = $('#public_client_input');
     ui.form.scope = $('#scope_input');
+    ui.form.verify_url = $('#verify_url_input');
     ui.form.cancel_button = $('#settings_cancel_button');
     ui.form.apply_button = $('#settings_apply_button');
     ui.form.ok_button = $('#settings_ok_button');
@@ -70,6 +74,7 @@ $(document).ready(() => {
     ui.refresh_token_button.click(handle_refresh_button);
     ui.request_token_button.click(handle_request_token);
     ui.delete_token_button.click(handle_delete_token);
+    ui.verify_button.click(handle_verify_button);
 
     $('form#oauth_config_form').on('submit', (evt) => {
         evt.stopPropagation();
@@ -114,7 +119,16 @@ const is_config_complete = (cfg) => {
  * @returns {boolean}
  */
 const has_cloneable_values = (cfg) => {
-    return !!(cfg && (cfg.name || cfg.authorize_url || cfg.token_url || cfg.client_id || cfg.client_secret || cfg.scope));
+    return !!(
+        cfg &&
+        (cfg.name ||
+            cfg.authorize_url ||
+            cfg.token_url ||
+            cfg.client_id ||
+            cfg.client_secret ||
+            cfg.scope ||
+            cfg.verify_url)
+    );
 };
 
 /**
@@ -147,6 +161,7 @@ const settings_snapshot = (cfg) => {
         client_secret: public_client ? '' : (cfg && cfg.client_secret) || '',
         public_client: public_client,
         scope: (cfg && cfg.scope) || '',
+        verify_url: (cfg && cfg.verify_url) || '',
     };
 };
 
@@ -319,6 +334,7 @@ const read_form_values = () => {
         client_secret: public_client ? '' : ui.form.client_secret.val(),
         public_client: public_client,
         scope: ui.form.scope.val(),
+        verify_url: ui.form.verify_url.val(),
     };
 };
 
@@ -349,6 +365,42 @@ const hide_action_buttons = (hide_all = false) => {
     ui.refresh_token_button.hide();
     ui.request_token_button.hide();
     ui.delete_token_button.hide();
+    ui.verify_button.hide();
+};
+
+/**
+ * Shows the post-token action buttons. Verify appears only when a verify_url is configured.
+ * @param {Object} [cfg]
+ */
+const show_token_action_buttons = (cfg = config) => {
+    ui.refresh_token_button.show();
+    ui.delete_token_button.show();
+    if (cfg && cfg.verify_url) {
+        ui.verify_button.show();
+    } else {
+        ui.verify_button.hide();
+    }
+};
+
+/**
+ * Formats a verify proxy response for the response area.
+ * @param {{http_status: number, http_status_text?: string, body?: string}} data
+ * @returns {string}
+ */
+const format_verify_response = (data) => {
+    const status_text = (data.http_status_text || '').trim();
+    const status_line = `HTTP ${data.http_status}${status_text ? ` ${status_text}` : ''}`;
+    let body = data.body == null ? '' : String(data.body);
+
+    if (body) {
+        try {
+            body = JSON.stringify(JSON.parse(body), null, 4);
+        } catch (e) {
+            // leave as plain text
+        }
+    }
+
+    return `${status_line}\n\n${body}`;
 };
 
 /**
@@ -441,8 +493,11 @@ const handle_refresh_button = (evt) => {
             console.log('INFO: refresh_token success');
             if (data.token) {
                 set_response_area(data.token);
-                ui.refresh_token_button.show();
-                ui.delete_token_button.show();
+                if (data.config) {
+                    config = data.config;
+                    config.public_client = !config.client_secret;
+                }
+                show_token_action_buttons();
             }
         })
         .fail((jqXHR, textStatus, errorThrown) => {
@@ -452,6 +507,50 @@ const handle_refresh_button = (evt) => {
                 jqXHR.responseJSON && jqXHR.responseJSON.message
                     ? jqXHR.responseJSON.message
                     : 'Failed to refresh the token';
+            set_response_area(message);
+        });
+};
+
+/**
+ * Handler for the verify button. Proxies a GET to the configured verify URL
+ * with the stored access token as a Bearer token.
+ * @param {Event} evt
+ */
+const handle_verify_button = (evt) => {
+    console.log('INFO: in handle_verify_button');
+    clear_response_area();
+    hide_action_buttons();
+    show_busy();
+
+    const url = `${API_BASE_URL}/v1/verify`;
+
+    const opts = {
+        method: 'POST',
+        data: {
+            config_name: config.name,
+        },
+        dataType: 'json',
+    };
+
+    $.ajax(url, opts)
+        .then((data, textStatus, jqXHR) => {
+            hide_busy();
+            console.log('INFO: verify success');
+            show_token_action_buttons();
+            if (data.status === 'ok') {
+                set_response_area(format_verify_response(data));
+            } else {
+                set_response_area(data.message || 'Verify failed');
+            }
+        })
+        .fail((jqXHR, textStatus, errorThrown) => {
+            hide_busy();
+            console.log('ERROR: verify failed');
+            show_token_action_buttons();
+            const message =
+                jqXHR.responseJSON && jqXHR.responseJSON.message
+                    ? jqXHR.responseJSON.message
+                    : 'Failed to verify access token';
             set_response_area(message);
         });
 };
@@ -532,8 +631,11 @@ const handle_request_token = (evt) => {
             console.log('INFO: exchange_code_for_token success');
             if ('token' in data) {
                 set_response_area(data.token);
-                ui.refresh_token_button.show();
-                ui.delete_token_button.show();
+                if (data.config) {
+                    config = data.config;
+                    config.public_client = !config.client_secret;
+                }
+                show_token_action_buttons();
             }
         })
         .fail((jqXHR, textStatus, errorThrown) => {
@@ -787,6 +889,7 @@ const begin_clone_from_current = () => {
         client_secret: source.client_secret || '',
         public_client: source.public_client === true || !source.client_secret,
         scope: source.scope || '',
+        verify_url: source.verify_url || '',
     };
 
     clear_current_config();
@@ -818,6 +921,7 @@ const save_config = (config) => {
         client_id: config.client_id,
         client_secret: config.client_secret || '',
         scope: config.scope,
+        verify_url: config.verify_url || '',
     };
 
     if (config.id) {
@@ -936,6 +1040,7 @@ const populate_setup_dialog = () => {
     ui.form.client_id.val(config.client_id || '');
     ui.form.client_secret.val(config.client_secret || '');
     ui.form.scope.val(config.scope || '');
+    ui.form.verify_url.val(config.verify_url || '');
     // Explicit flag wins; otherwise infer public client from a saved row with no secret.
     const is_public = config.public_client === true || (!!config.id && !config.client_secret);
     set_public_client_mode(is_public, false);
@@ -952,6 +1057,7 @@ const configure_app = () => {
     ui.form.client_id.on('keyup change paste', handle_config_item_changed);
     ui.form.client_secret.on('keyup change paste', handle_config_item_changed);
     ui.form.scope.on('keyup change paste', handle_config_item_changed);
+    ui.form.verify_url.on('keyup change paste', handle_config_item_changed);
 
     clear_response_area();
 
@@ -1056,8 +1162,7 @@ const process_startup_data = (data) => {
             ui.request_token_button.show();
         } else if (data.token) {
             set_response_area(data.token);
-            ui.refresh_token_button.show();
-            ui.delete_token_button.show();
+            show_token_action_buttons();
         } else if (data.message) {
             set_response_area(data.message);
             hide_action_buttons();
