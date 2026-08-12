@@ -40,7 +40,7 @@ const format_body = (body) => {
     }
     try {
         return JSON.stringify(JSON.parse(body), null, 2);
-    } catch (e) {
+    } catch (_e) {
         return body;
     }
 };
@@ -73,7 +73,7 @@ const token_request = async (token_url, params) => {
                 '--- raw POST body ---',
                 body_string || '(empty)',
                 '[oauth] >>> end request',
-            ].join('\n')
+            ].join('\n'),
         );
     }
 
@@ -94,7 +94,7 @@ const token_request = async (token_url, params) => {
                     e.cause ? `cause: ${e.cause.message || String(e.cause)}` : null,
                 ]
                     .filter(Boolean)
-                    .join('\n')
+                    .join('\n'),
             );
         }
         throw new Error(`Token request to ${token_url} failed: ${e.message || e}`);
@@ -113,14 +113,14 @@ const token_request = async (token_url, params) => {
                 '--- response body ---',
                 format_body(body),
                 '[oauth] <<< end response',
-            ].join('\n')
+            ].join('\n'),
         );
     }
 
     let json;
     try {
         json = JSON.parse(body);
-    } catch (e) {
+    } catch (_e) {
         throw new Error(`Token endpoint returned non-JSON response (HTTP ${response.status}): ${body}`);
     }
 
@@ -147,7 +147,7 @@ const token_request = async (token_url, params) => {
  * @returns {string}
  */
 const build_authorize_url = (config, { state, code_challenge, code_challenge_method = 'S256' }) => {
-    if (!config || !config.authorize_url) {
+    if (!config?.authorize_url) {
         throw new Error('Invalid config (no authorize_url)');
     }
 
@@ -180,7 +180,7 @@ const build_authorize_url = (config, { state, code_challenge, code_challenge_met
                 '--- query params ---',
                 JSON.stringify(params, null, 2),
                 '[oauth] >>> end request',
-            ].join('\n')
+            ].join('\n'),
         );
     }
 
@@ -206,7 +206,7 @@ const log_authorize_callback = (query) => {
             '--- query params ---',
             JSON.stringify(query, null, 2),
             '[oauth] <<< end response',
-        ].join('\n')
+        ].join('\n'),
     );
 };
 
@@ -218,7 +218,7 @@ const log_authorize_callback = (query) => {
  * @returns {Promise} Resolved with the token, or rejected with an error message.
  */
 const get_token = async (config, code) => {
-    if (!config || !config.token_url) {
+    if (!config?.token_url) {
         throw new Error('Invalid config (no token_url)');
     }
 
@@ -260,13 +260,13 @@ const get_token = async (config, code) => {
  * @returns {Promise} Resolved with the new token, or rejected with an error message.
  */
 const refresh_token = async (config) => {
-    if (!config || !config.token_url) {
+    if (!config?.token_url) {
         throw new Error('Invalid config (no token_url)');
     }
 
     const token_wrapper = db.read_token(config.name);
 
-    if (!token_wrapper || !token_wrapper.token) {
+    if (!token_wrapper?.token) {
         throw new Error('No token data');
     }
 
@@ -309,13 +309,13 @@ const refresh_token = async (config) => {
  * @returns {Promise<{http_status: number, http_status_text: string, body: string}>}
  */
 const verify_access = async (config) => {
-    if (!config || !config.verify_url) {
+    if (!config?.verify_url) {
         throw new Error('Invalid config (no verify_url)');
     }
 
     const token_wrapper = db.read_token(config.name);
 
-    if (!token_wrapper || !token_wrapper.token) {
+    if (!token_wrapper?.token) {
         throw new Error('No token data');
     }
 
@@ -336,7 +336,7 @@ const verify_access = async (config) => {
                 `GET ${config.verify_url}`,
                 format_headers(headers),
                 '[oauth] >>> end request',
-            ].join('\n')
+            ].join('\n'),
         );
     }
 
@@ -353,7 +353,7 @@ const verify_access = async (config) => {
                     '[oauth] !!! verify request failed (network/DNS/TLS)',
                     `GET ${config.verify_url}`,
                     `error: ${e.message || String(e)}`,
-                ].join('\n')
+                ].join('\n'),
             );
         }
         throw new Error(`Verify request to ${config.verify_url} failed: ${e.message || e}`);
@@ -372,7 +372,7 @@ const verify_access = async (config) => {
                 '--- response body ---',
                 format_body(body),
                 '[oauth] <<< end response',
-            ].join('\n')
+            ].join('\n'),
         );
     }
 
