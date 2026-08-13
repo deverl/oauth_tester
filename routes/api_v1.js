@@ -21,7 +21,7 @@ router.post('/get_startup_data', (req, res, next) => {
     o = load_startup_data(config_name);
 
     if (!o.code && o.token) {
-        let timestamp = new Date().getTime();
+        const timestamp = new Date().getTime();
         if (o.token.expire_time_ms && o.token.expire_time_ms > timestamp) {
             console.info(`Token for ${config_name} is still good`);
         } else {
@@ -230,7 +230,9 @@ router.get('/oauth_handler', (req, res, next) => {
             db.delete_state(config.name);
             db.save_code(config.name, req.query.code);
         } else {
-            console.error(`ERROR: (oauth_handler) No config matches the returned state. query = ${JSON.stringify(req.query)}`);
+            console.error(
+                `ERROR: (oauth_handler) No config matches the returned state. query = ${JSON.stringify(req.query)}`,
+            );
             res.redirect(`/?error=${encodeURIComponent('Returned state does not match any pending authorization')}`);
             return;
         }
@@ -358,7 +360,7 @@ router.post('/verify', (req, res, next) => {
  * @returns {Object}
  */
 const load_startup_data = (config_name = null) => {
-    let data = {};
+    const data = {};
 
     const config_list = db.get_config_list();
 

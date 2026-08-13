@@ -69,9 +69,7 @@ const migrate_legacy_schema = () => {
         `);
     }
 
-    const props_table = database
-        .prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'props'`)
-        .get();
+    const props_table = database.prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'props'`).get();
 
     if (props_table && !props_table.sql.includes(PROP_TYPES.VERIFIER)) {
         console.log('INFO: (migrate_legacy_schema) Migrating legacy props table');
@@ -301,7 +299,7 @@ const read_prop = (config_name, type) => {
     let result = null;
     try {
         const q = get_db().prepare(
-            `SELECT value FROM props JOIN config ON config.id = props.config_id WHERE name = ? AND props.type = ?`
+            `SELECT value FROM props JOIN config ON config.id = props.config_id WHERE name = ? AND props.type = ?`,
         );
         const r = q.all(config_name, type);
         if (Array.isArray(r) && r.length > 0) {
@@ -419,7 +417,7 @@ const get_config_from_prop_value = (type, value) => {
 
     try {
         const q = get_db().prepare(
-            `SELECT config.* FROM config JOIN props ON config.id = props.config_id WHERE props.type = ? AND props.value = ?`
+            `SELECT config.* FROM config JOIN props ON config.id = props.config_id WHERE props.type = ? AND props.value = ?`,
         );
         const r = q.all(type, value);
 
@@ -489,14 +487,14 @@ const save_config = (config) => {
     try {
         if (id) {
             const q = get_db().prepare(
-                `UPDATE config SET name = ?, authorize_url = ?, token_url = ?, client_id = ?, client_secret = ?, scope = ?, verify_url = ? WHERE id = ?`
+                `UPDATE config SET name = ?, authorize_url = ?, token_url = ?, client_id = ?, client_secret = ?, scope = ?, verify_url = ? WHERE id = ?`,
             );
             const info = q.run(name, authorize_url, token_url, client_id, client_secret, scope, verify_url, id);
             return info.changes ? id : null;
         }
 
         const q = get_db().prepare(
-            `INSERT INTO config (name, authorize_url, token_url, client_id, client_secret, scope, verify_url) VALUES (?, ?, ?, ?, ?, ?, ?)`
+            `INSERT INTO config (name, authorize_url, token_url, client_id, client_secret, scope, verify_url) VALUES (?, ?, ?, ?, ?, ?, ?)`,
         );
         const info = q.run(name, authorize_url, token_url, client_id, client_secret, scope, verify_url);
         return info.lastInsertRowid || null;

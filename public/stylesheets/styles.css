@@ -47,7 +47,7 @@ header div.config-name-block {
 #config_name_header {
     font-size: 30px;
     margin-left: 10px;
-    font-family: 'Courier New', Courier, monospace;
+    font-family: "Courier New", Courier, monospace;
 }
 
 header div#setup_button {
@@ -121,7 +121,7 @@ div.inner-container {
     border-radius: 10px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
     font-size: 15px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     color: #1f1f1f;
     box-sizing: border-box;
 }
@@ -331,8 +331,8 @@ button.config-list-button .icon {
     color: #7a869a;
 }
 
-div.inner-container input[type='text'],
-div.inner-container input[type='password'] {
+div.inner-container input[type="text"],
+div.inner-container input[type="password"] {
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
@@ -343,8 +343,8 @@ div.inner-container input[type='password'] {
     outline: none;
 }
 
-div.inner-container input[type='text']:focus,
-div.inner-container input[type='password']:focus {
+div.inner-container input[type="text"]:focus,
+div.inner-container input[type="password"]:focus {
     border-color: #1589ee;
     box-shadow: 0 0 0 3px rgba(21, 137, 238, 0.15);
 }
@@ -420,7 +420,7 @@ button.secret-toggle .icon {
     user-select: none;
 }
 
-.checkbox-label input[type='checkbox'] {
+.checkbox-label input[type="checkbox"] {
     margin-top: 2px;
     flex-shrink: 0;
 }

@@ -21,7 +21,7 @@ let settings_baseline = null;
 /** True for New/Clone drafts that exist only in the form until Apply/OK. */
 let settings_unsaved_draft = false;
 
-let ui = {
+const ui = {
     response_area: null,
     login_button: null,
     refresh_token_button: null,
@@ -225,10 +225,7 @@ const show_save_status = (message, is_error = false) => {
         return;
     }
 
-    ui.form.save_status
-        .text(message)
-        .toggleClass('is-error', !!is_error)
-        .addClass('is-visible');
+    ui.form.save_status.text(message).toggleClass('is-error', !!is_error).addClass('is-visible');
 
     if (ui.form.save_status_timer) {
         clearTimeout(ui.form.save_status_timer);
@@ -456,7 +453,7 @@ const handle_login_button = (evt) => {
                 console.log(`DEBUG: redirect url: ${authorize_url}`);
                 window.location.assign(authorize_url);
             } else {
-                let error = data.message ? data.message : 'unknown error';
+                const error = data.message ? data.message : 'unknown error';
                 set_response_area(`Couldn't begin the authorization flow! err = ${error}`);
             }
         })
@@ -616,7 +613,7 @@ const handle_request_token = (evt) => {
 
     const url = `${API_BASE_URL}/v1/exchange_code_for_token`;
 
-    let opts = {
+    const opts = {
         method: 'POST',
         data: {
             config_name: config.name,
@@ -640,8 +637,7 @@ const handle_request_token = (evt) => {
         })
         .fail((jqXHR, textStatus, errorThrown) => {
             hide_busy();
-            const message =
-                jqXHR.responseJSON && jqXHR.responseJSON.message ? jqXHR.responseJSON.message : errorThrown;
+            const message = jqXHR.responseJSON && jqXHR.responseJSON.message ? jqXHR.responseJSON.message : errorThrown;
             set_response_area(message);
         });
 };
@@ -732,7 +728,9 @@ const load_config_list_values = () => {
 
     if (!config_list.length) {
         ui.form.config_list.append(
-            $(`<div class='config-list-empty'>No configurations yet. Use New or fill in the form and Apply / OK.</div>`)
+            $(
+                `<div class='config-list-empty'>No configurations yet. Use New or fill in the form and Apply / OK.</div>`,
+            ),
         );
         return;
     }
@@ -740,10 +738,10 @@ const load_config_list_values = () => {
     $.each(config_list, (idx, val) => {
         const $text = $(`<div class='config-list-item-text'></div>`).text(val).attr('title', val);
         const $clone = $(
-            `<div class='config-list-item-icon config-list-item-clone' title='Clone'><i class="copy icon"></i></div>`
+            `<div class='config-list-item-icon config-list-item-clone' title='Clone'><i class="copy icon"></i></div>`,
         );
         const $trash = $(
-            `<div class='config-list-item-icon config-list-item-delete' title='Delete'><i class="trash alternate icon"></i></div>`
+            `<div class='config-list-item-icon config-list-item-delete' title='Delete'><i class="trash alternate icon"></i></div>`,
         );
         const $actions = $(`<div class='config-list-item-actions'></div>`).append($clone, $trash);
         const $item = $(`<div class='config-list-item'></div>`).attr('data-config-name', val);
@@ -957,7 +955,7 @@ const save_config = (config) => {
             handle_config_item_changed();
             show_save_status('Failed to save', true);
             return false;
-        }
+        },
     );
 };
 
@@ -967,7 +965,7 @@ const save_config = (config) => {
  * @returns
  */
 const delete_config = (config_name) => {
-    let p = new Promise((resolve, reject) => {
+    const p = new Promise((resolve, reject) => {
         const url = `${API_BASE_URL}/v1/delete_config`;
 
         const opts = {
@@ -1097,7 +1095,7 @@ const configure_app = () => {
 const get_startup_data = (config_name = null) => {
     console.log('INFO: in get_startup_data');
 
-    let p = new Promise((resolve, reject) => {
+    const p = new Promise((resolve, reject) => {
         config_name = config_name || get_current_config();
         const url = `${API_BASE_URL}/v1/get_startup_data`;
 

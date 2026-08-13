@@ -35,9 +35,6 @@ describe('verbosity', () => {
     });
 
     it('turns on when flag set even if VERBOSITY=false', () => {
-        assert.equal(
-            init_verbosity({ env: { VERBOSITY: 'false' }, argv: ['node', '--verbose'] }),
-            true
-        );
+        assert.equal(init_verbosity({ env: { VERBOSITY: 'false' }, argv: ['node', '--verbose'] }), true);
     });
 });

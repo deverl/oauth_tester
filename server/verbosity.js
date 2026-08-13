@@ -3,7 +3,7 @@ const FALSY = new Set(['', '0', 'false', 'no', 'off']);
 let verbose = false;
 
 const env_enables = (env) => {
-    if (!Object.prototype.hasOwnProperty.call(env, 'VERBOSITY') || env.VERBOSITY == null) {
+    if (!Object.hasOwn(env, 'VERBOSITY') || env.VERBOSITY == null) {
         return false;
     }
     const v = String(env.VERBOSITY).trim().toLowerCase();
